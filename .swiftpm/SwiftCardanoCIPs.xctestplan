@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "75434D47-B3CA-42D3-B2DE-C185DAAF36BE",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "SwiftCardanoCIPsTests",
+        "name" : "SwiftCardanoCIPsTests"
+      }
+    }
+  ],
+  "version" : 1
+}
