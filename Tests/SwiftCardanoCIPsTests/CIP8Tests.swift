@@ -68,7 +68,8 @@ import Testing
     @Test func testVerifyMessage() throws {
         let signedMessage =
             "845869a3012704582060545b786d3a6f903158e35aae9b86548a99bc47d4b0a6f503ab5e78c1a9bbfc6761646472657373583900ddba3ad76313825f4f646f5aa6d323706653bda40ec1ae55582986a463e661768b92deba45b5ada4ab9e7ffd17ed3051b2e03500e0542e9aa166686173686564f452507963617264616e6f20697320636f6f6c2e58403b09cbae8d272ff94befd28cc04b152aea3c1633caffb4924a8a8c45be3ba6332a76d9f2aba833df53803286d32a5ee700990b79a0e86fab3cccdbfd37ce250f"
-        let signingAddress = try Address(from: "addr_test1qrwm5wkhvvfcyh60v3h44fknydcxv5aa5s8vrtj4tq5cdfrrueshdzujm6aytddd5j4eullazlknq5djuq6spcz596dqjvm8nu"
+        let signingAddress = try Address(
+            from: .string("addr_test1qrwm5wkhvvfcyh60v3h44fknydcxv5aa5s8vrtj4tq5cdfrrueshdzujm6aytddd5j4eullazlknq5djuq6spcz596dqjvm8nu")
         )
         
         let verification = try CIP8.verify(signedMessage: SignedMessage(signature: signedMessage))
@@ -84,7 +85,8 @@ import Testing
             key: "a401010327200621582060545b786d3a6f903158e35aae9b86548a99bc47d4b0a6f503ab5e78c1a9bbfc"
         )
 
-        let signingAddress = try Address(from: "addr_test1qrwm5wkhvvfcyh60v3h44fknydcxv5aa5s8vrtj4tq5cdfrrueshdzujm6aytddd5j4eullazlknq5djuq6spcz596dqjvm8nu"
+        let signingAddress = try Address(
+            from: .string("addr_test1qrwm5wkhvvfcyh60v3h44fknydcxv5aa5s8vrtj4tq5cdfrrueshdzujm6aytddd5j4eullazlknq5djuq6spcz596dqjvm8nu")
         )
         
         let verification = try CIP8.verify(signedMessage: signedMessage)
@@ -98,7 +100,8 @@ import Testing
             signature: "84582aa201276761646472657373581de0219f8e3ffefc82395df0bfcfe4e576f8f824bae0c731be35321c01d7a166686173686564f452507963617264616e6f20697320636f6f6c2e58402f2b75301a20876beba03ec68b30c5fbaebc99cb1d038b679340eb2299c2b75cd9c6c884c198e89f690548ee94a87168f5db34acf024d5788e58d119bcba630d",
             key: "a40101032720062158200d8e03b5673bf8dabc567dd6150ebcd56179a91a6c0b245f477033dcab7dc780"
         )
-        let signingAddress = try Address(from: "stake_test1uqselr3llm7gyw2a7zlule89wmu0sf96urrnr034xgwqr4csd30df"
+        let signingAddress = try Address(
+            from: .string("stake_test1uqselr3llm7gyw2a7zlule89wmu0sf96urrnr034xgwqr4csd30df")
         )
 
         let verification = try CIP8.verify(signedMessage: signedMessage)

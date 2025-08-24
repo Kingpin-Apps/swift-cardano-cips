@@ -280,7 +280,7 @@ public struct CIP8 {
         let address = decodedMessage.phdr[addressHeader] as! Data
         
         let signingAddress: Address = try Address(
-            from: address
+            from: .bytes(address)
         )
         
         // check that the address attached matches the one of the verification keys used to sign the message
