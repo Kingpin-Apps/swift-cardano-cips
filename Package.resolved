@@ -1,5 +1,5 @@
 {
-  "originHash" : "846e8f137f7cdc839aa9c1327091de6ad63099686acc0cf806aec48fda0484f3",
+  "originHash" : "46798959b2d6a2a4203c83c2ac7551afa99042bd17e68963fb5a58f6e380d920",
   "pins" : [
     {
       "identity" : "base32",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/krzyzanowskim/CryptoSwift.git",
       "state" : {
-        "revision" : "729e01bc9b9dab466ac85f21fb9ee2bc1c61b258",
-        "version" : "1.8.4"
+        "revision" : "e45a26384239e028ec87fbcc788f513b67e10d8f",
+        "version" : "1.9.0"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cardano-core.git",
       "state" : {
-        "revision" : "2bc2b79e18ca91480f0c1396e4042e9b9a07eefe",
-        "version" : "0.1.28"
+        "revision" : "fc614196b380c871b7ca8b83d7117f9ba0c9b834",
+        "version" : "0.1.29"
       }
     },
     {
@@ -141,8 +141,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cose.git",
       "state" : {
-        "revision" : "f194ec611c5539053d9d166b23100df93a5bc74d",
-        "version" : "0.1.13"
+        "revision" : "0e972bc38815233b055e7e1c53e8970a796072bd",
+        "version" : "0.1.14"
       }
     },
     {
@@ -159,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "c1ec8b567dc8dcbd844179677a9cc262ac3c3d2b",
-        "version" : "0.1.1"
+        "revision" : "a0cba8e4f5c11b5d9c336e55c24b417b52bc8e9e",
+        "version" : "0.1.2"
       }
     },
     {
