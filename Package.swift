@@ -7,7 +7,7 @@ let package = Package(
     name: "SwiftCardanoCIPs",
     platforms: [
       .iOS(.v14),
-      .macOS(.v13),
+      .macOS(.v14),
       .watchOS(.v7),
       .tvOS(.v14),
     ],
@@ -18,9 +18,9 @@ let package = Package(
             targets: ["SwiftCardanoCIPs"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/outfoxx/PotentCodables.git", .upToNextMajor(from: "3.5.0")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", .upToNextMajor(from: "0.1.11")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.1.12"),
+        .package(url: "https://github.com/KINGH242/PotentCodables.git", .upToNextMinor(from: "3.6.0")),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", .upToNextMajor(from: "0.1.13")),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.1.28"),
         .package(url: "https://github.com/Kingpin-Apps/swift-ncal.git", .upToNextMinor(from: "0.1.4")),
     ],
     targets: [

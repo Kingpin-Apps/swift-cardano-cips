@@ -1,5 +1,5 @@
 {
-  "originHash" : "dc1be7cdb58635c7568b0c6f8a40fc5e576481bcb58c9dfcbe1852d1d31d58ff",
+  "originHash" : "846e8f137f7cdc839aa9c1327091de6ad63099686acc0cf806aec48fda0484f3",
   "pins" : [
     {
       "identity" : "base32",
@@ -85,10 +85,10 @@
     {
       "identity" : "potentcodables",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/outfoxx/PotentCodables.git",
+      "location" : "https://github.com/KINGH242/PotentCodables.git",
       "state" : {
-        "revision" : "660e33e84e00b9bf07bd41dd99ff800600e435e7",
-        "version" : "3.5.0"
+        "revision" : "1b3880253008d76dc16e48d6140a81d061214324",
+        "version" : "3.6.0"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cardano-core.git",
       "state" : {
-        "revision" : "e5f652a4f8b0ac3ca962ecdaeae068147060ba2c",
-        "version" : "0.1.12"
+        "revision" : "2bc2b79e18ca91480f0c1396e4042e9b9a07eefe",
+        "version" : "0.1.28"
       }
     },
     {
@@ -141,8 +141,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cose.git",
       "state" : {
-        "revision" : "9555242e74b2b1f2770ee37717b68875254bd1e6",
-        "version" : "0.1.11"
+        "revision" : "f194ec611c5539053d9d166b23100df93a5bc74d",
+        "version" : "0.1.13"
       }
     },
     {
@@ -159,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "27a02cce4ca8bfb4f4cf8ae1ad23f5172f05ed96",
-        "version" : "0.1.0"
+        "revision" : "c1ec8b567dc8dcbd844179677a9cc262ac3c3d2b",
+        "version" : "0.1.1"
       }
     },
     {
