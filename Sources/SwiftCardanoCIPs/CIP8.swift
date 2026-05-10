@@ -65,16 +65,47 @@ public struct CIP8 {
     ///   - attachCoseKey: Whether to attach the COSE key to the signed message
     ///   - network: Network to use for the address generation
     /// - Returns: The signed message
+    /// Sign an arbitrary byte payload following CIP-0008. Use this when the payload is not
+    /// a UTF-8 string (e.g. CIP-30 `signData` receives raw bytes).
+    public static func sign(
+        payload: Data,
+        signingKey: SigningKeyType,
+        attachCoseKey: Bool = false,
+        network: Network = .mainnet
+    ) throws -> SignedMessage {
+        return try _sign(
+            payload: payload,
+            signingKey: signingKey,
+            attachCoseKey: attachCoseKey,
+            network: network
+        )
+    }
+
     public static func sign(
         message: String,
         signingKey: SigningKeyType,
         attachCoseKey: Bool = false,
         network: Network = .mainnet
     ) throws -> SignedMessage {
+        return try _sign(
+            payload: message.data(using: .utf8)!,
+            signingKey: signingKey,
+            attachCoseKey: attachCoseKey,
+            network: network
+        )
+    }
+
+    private static func _sign(
+        payload: Data,
+        signingKey: SigningKeyType,
+        attachCoseKey: Bool,
+        network: Network
+    ) throws -> SignedMessage {
         let address: Address
-        let verificationKey: any VerificationKey
+        let verificationKey: any VerificationKeyProtocol
         let signingKeyPayload: Data
-        
+        let networkId = network.networkId
+
         // Derive verification key and address based on key type
         switch signingKey {
             case .signingKey(let sKey):
@@ -84,7 +115,7 @@ public struct CIP8 {
                     address = try Address(
                         paymentPart: nil,
                         stakingPart: .verificationKeyHash(vkey.hash()),
-                        network: network
+                        network: networkId
                     )
                     verificationKey = vkey
                 } else {
@@ -92,28 +123,28 @@ public struct CIP8 {
                     address = try Address(
                         paymentPart: .verificationKeyHash(vkey.hash()),
                         stakingPart: nil,
-                        network: network
+                        network: networkId
                     )
                     verificationKey = vkey
                 }
             case .extendedSigningKey(let extendedSKey):
                 signingKeyPayload = extendedSKey.payload
                 if extendedSKey is StakeExtendedSigningKey {
-                    let extendedVKey: StakeExtendedVerificationKey = extendedSKey.toVerificationKey()
-                    let vkey: StakeVerificationKey = extendedVKey.toNonExtended()
+                    let extendedVKey: StakeExtendedVerificationKey = try extendedSKey.toVerificationKey()
+                    let vkey: StakeVerificationKey = try extendedVKey.toNonExtended()
                     address = try Address(
                         paymentPart: nil,
-                        stakingPart: .verificationKeyHash(vkey.hash()),
-                        network: network
+                        stakingPart: .verificationKeyHash(try vkey.hash()),
+                        network: networkId
                     )
                     verificationKey = vkey
                 } else {
-                    let extendedVKey: PaymentExtendedVerificationKey = extendedSKey.toVerificationKey()
-                    let vkey: PaymentVerificationKey = extendedVKey.toNonExtended()
+                    let extendedVKey: PaymentExtendedVerificationKey = try extendedSKey.toVerificationKey()
+                    let vkey: PaymentVerificationKey = try extendedVKey.toNonExtended()
                     address = try Address(
-                        paymentPart: .verificationKeyHash(vkey.hash()),
+                        paymentPart: .verificationKeyHash(try vkey.hash()),
                         stakingPart: nil,
-                        network: network
+                        network: networkId
                     )
                     verificationKey = vkey
                 }
@@ -158,7 +189,7 @@ public struct CIP8 {
         let sign1Message = Sign1Message(
             phdr: protectedHeader,
             uhdr: unprotectedHeader,
-            payload: message.data(using: .utf8)!,
+            payload: payload,
             key: coseKey
         )
         

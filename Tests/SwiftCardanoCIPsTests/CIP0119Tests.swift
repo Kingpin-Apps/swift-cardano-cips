@@ -68,10 +68,10 @@ func normalizeJSON(_ jsonString: String) -> String? {
 
     @Test("Test JSON Decoding of DRepMetadata")
     func testDecoding() async throws {
+        // `fromDict(_ dict: [String: Any])` is gone; `fromJSON` is the public entry that
+        // converts the JSON into a `Primitive` and then calls the new `fromDict(_:)`.
         let json = try validDRepMetadata.toJSON()!
-        let jsonData = json.data(using: .utf8)!
-        let decodedDict = try JSONSerialization.jsonObject(with: jsonData, options: []) as! [String: Any]
-        let decodedDRep = try DRepMetadata.fromDict(decodedDict)
+        let decodedDRep = try DRepMetadata.fromJSON(json)
 
         #expect(decodedDRep.givenName == validDRepMetadata.givenName, "Decoded givenName should match the original")
         #expect(decodedDRep.paymentAddress == validDRepMetadata.paymentAddress, "Decoded paymentAddress should match the original")

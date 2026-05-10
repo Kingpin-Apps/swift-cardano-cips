@@ -5,7 +5,7 @@ import Testing
 @testable import SwiftCardanoCIPs
 
 @Suite struct CIP8Tests {
-    let extendedSK = try! PaymentExtendedSigningKey.fromJSON(
+    let extendedSK = try! PaymentExtendedSigningKey.fromTextEnvelope(
             """
             {
                 "type": "PaymentExtendedSigningKeyShelley_ed25519_bip32",
@@ -15,7 +15,7 @@ import Testing
             """
     )
 
-    let extendedVK = try! PaymentExtendedVerificationKey.fromJSON(
+    let extendedVK = try! PaymentExtendedVerificationKey.fromTextEnvelope(
             """
             {
                 "type": "PaymentExtendedVerificationKeyShelley_ed25519_bip32",
@@ -25,7 +25,7 @@ import Testing
             """
     )
 
-    let sk = try! PaymentSigningKey.fromJSON(
+    let sk = try! PaymentSigningKey.fromTextEnvelope(
             """
             {
                 "type": "GenesisUTxOSigningKey_ed25519",
@@ -35,7 +35,7 @@ import Testing
             """
     )
 
-    let vk = try! PaymentVerificationKey.fromJSON(
+    let vk = try! PaymentVerificationKey.fromTextEnvelope(
             """
             {
                 "type": "GenesisUTxOVerificationKey_ed25519",
@@ -45,7 +45,7 @@ import Testing
             """
     )
 
-    let stakeSK = try! StakeSigningKey.fromJSON(
+    let stakeSK = try! StakeSigningKey.fromTextEnvelope(
             """
             {
                 "type": "StakeSigningKeyShelley_ed25519",
@@ -55,7 +55,7 @@ import Testing
             """
     )
 
-    let stakeVK = try! StakeVerificationKey.fromJSON(
+    let stakeVK = try! StakeVerificationKey.fromTextEnvelope(
             """
             {
                 "type": "StakeVerificationKeyShelley_ed25519",
@@ -118,7 +118,7 @@ import Testing
             message: message,
             signingKey: .signingKey(sk),
             attachCoseKey: false,
-            network: .testnet
+            network: .preprod
         )
 
         let verification = try CIP8.verify(signedMessage: signedMessage)
@@ -132,7 +132,7 @@ import Testing
             message: message,
             signingKey: .signingKey(stakeSK),
             attachCoseKey: false,
-            network: .testnet
+            network: .preprod
         )
 
         let verification = try CIP8.verify(signedMessage: signedMessage)
@@ -146,7 +146,7 @@ import Testing
             message: message,
             signingKey: .signingKey(sk),
             attachCoseKey: true,
-            network: .testnet
+            network: .preprod
         )
 
         #expect(signedMessage.signature != nil)
@@ -160,7 +160,7 @@ import Testing
             message: message,
             signingKey: .extendedSigningKey(extendedSK),
             attachCoseKey: false,
-            network: .testnet
+            network: .preprod
         )
 
         let verification = try CIP8.verify(signedMessage: signedMessage)
@@ -175,7 +175,7 @@ import Testing
             message: message,
             signingKey: .extendedSigningKey(extendedSK),
             attachCoseKey: true,
-            network: .testnet
+            network: .preprod
         )
 
         let verification = try CIP8.verify(signedMessage: signedMessage)

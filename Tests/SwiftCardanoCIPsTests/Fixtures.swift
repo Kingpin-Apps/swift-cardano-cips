@@ -32,7 +32,8 @@ var drepMetadata: DRepMetadata? {
             ofType: drepMetadataFilePath.ofType,
             inDirectory: drepMetadataFilePath.inDirectory
         )
-        return try DRepMetadata.load(from: filePath!)
+        let json = try String(contentsOfFile: filePath!, encoding: .utf8)
+        return try DRepMetadata.fromJSON(json)
     } catch {
         return nil
     }
