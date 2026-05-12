@@ -19,9 +19,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/KINGH242/PotentCodables.git", .upToNextMinor(from: "3.6.0")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", .upToNextMajor(from: "0.1.16")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.3.18"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", .upToNextMajor(from: "0.1.18")),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.3.19"),
         .package(url: "https://github.com/Kingpin-Apps/swift-ncal.git", .upToNextMinor(from: "0.2.2")),
+        // Provides CryptoKit-compatible APIs on Linux where CryptoKit itself is unavailable.
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -33,6 +35,11 @@ let package = Package(
                 .product(name: "SwiftCOSE", package: "swift-cose"),
                 .product(name: "SwiftCardanoCore", package: "swift-cardano-core"),
                 .product(name: "SwiftNcal", package: "swift-ncal"),
+                .product(
+                    name: "Crypto",
+                    package: "swift-crypto",
+                    condition: .when(platforms: [.linux])
+                ),
             ]),
         .testTarget(
             name: "SwiftCardanoCIPsTests",
