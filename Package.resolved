@@ -1,5 +1,5 @@
 {
-  "originHash" : "ce26da9633894c8356ad30438607e3fec122dc40a44d1a79819ddb1afd4f7b2f",
+  "originHash" : "e53b281c3ac3d9e689817dbe55a8ae8210a5938e5bb79ac76208211493c2a415",
   "pins" : [
     {
       "identity" : "base32",
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cardano-core.git",
       "state" : {
-        "revision" : "251640c5b37e27c1be3745363d15821a9fe0971a",
-        "version" : "0.3.19"
+        "revision" : "a67a74d7baea1d6bd518228f958ad9c086cc9948",
+        "version" : "0.3.21"
       }
     },
     {
@@ -159,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-kes.git",
       "state" : {
-        "revision" : "82990128a42f062bb1690802b48d74720fbd8249",
-        "version" : "0.1.0"
+        "revision" : "248c28ab0fabf011b162a60d5f9b298bd4ee3ad2",
+        "version" : "0.1.2"
       }
     },
     {
@@ -186,8 +186,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-ncal.git",
       "state" : {
-        "revision" : "092ff55a1e32ea7bd6faeb6a3884dd90109558ae",
-        "version" : "0.2.2"
+        "revision" : "20612ca55a3977c8e77cd1bee1e0d363df133e3b",
+        "version" : "0.2.3"
       }
     },
     {

@@ -220,22 +220,93 @@ public struct WalletInfo: Equatable, Sendable, Codable {
     }
 }
 
+// MARK: - Request context & origin policy
+
+/// Identifies *who* is making a CIP-30 request. The bridge synthesizes this from
+/// `WKScriptMessage.frameInfo` (security origin + main-frame flag); custom transports
+/// should populate it however is meaningful to them.
+///
+/// `origin` follows the standard scheme://host[:port] form used by browsers (RFC 6454).
+/// Default ports are omitted. Opaque origins (`data:`, `file:` with no host) collapse
+/// to `"<scheme>://"` or the literal `"null"`.
+public struct CIP30RequestContext: Sendable, Equatable, Hashable {
+    /// Canonical origin string, e.g. `"https://app.example.com"`.
+    public let origin: String
+
+    /// True if the request came from the top-level frame, false for any nested frame
+    /// (iframe, frame, etc.).
+    public let isMainFrame: Bool
+
+    /// Best-effort URL of the requesting frame. May be `nil` for opaque origins or when
+    /// `WKFrameInfo.request.url` is unset.
+    public let pageURL: URL?
+
+    public init(origin: String, isMainFrame: Bool, pageURL: URL? = nil) {
+        self.origin = origin
+        self.isMainFrame = isMainFrame
+        self.pageURL = pageURL
+    }
+}
+
+/// Origin gate applied by ``CIP30WebBridge`` before any CIP-30 method runs. The bridge
+/// rejects with ``APIError/refused(_:)`` when this returns `false`.
+public enum CIP30OriginPolicy: Sendable {
+    /// Default. Only the top-level frame may talk to the bridge. Any iframe (ad, embed,
+    /// third-party widget) is refused.
+    case mainFrameOnly
+
+    /// Allow any frame whose origin is in the supplied set. Use this when you intentionally
+    /// embed a known dApp inside another and want the inner one to act as the wallet client.
+    case allowOrigins(Set<String>)
+
+    /// Application-defined check. Receives the full request context.
+    case custom(@Sendable (CIP30RequestContext) -> Bool)
+
+    /// Decide whether `context` is allowed to invoke CIP-30 methods.
+    public func allows(_ context: CIP30RequestContext) -> Bool {
+        switch self {
+        case .mainFrameOnly:
+            return context.isMainFrame
+        case .allowOrigins(let allowed):
+            return allowed.contains(context.origin)
+        case .custom(let fn):
+            return fn(context)
+        }
+    }
+}
+
 // MARK: - Initial API
 
 /// Unauthenticated initial API. In a browser this corresponds to the static
 /// `window.cardano.{walletName}` object the dApp inspects before calling `enable()`.
+///
+/// The protocol carries both an origin-blind surface (`isEnabled()`, `enable(extensions:)`)
+/// and an origin-aware one (`isEnabled(context:)`, `enable(extensions:context:)`). The
+/// bridge always calls the context-aware variants. Default implementations forward to the
+/// origin-blind variants, so existing implementations keep compiling — but they will
+/// trample per-origin state. Real wallets should implement the context-aware methods.
 public protocol CIP30Initial: Sendable {
     /// Static wallet metadata.
     var info: WalletInfo { get }
 
-    /// Whether this dApp origin has been previously approved.
+    /// Origin-blind enable check. Kept for back-compat. Bridge callers prefer
+    /// ``isEnabled(context:)``.
     func isEnabled() async -> Bool
 
-    /// Request access. Returns the full ``CIP30Provider`` on success, or throws
-    /// ``APIError/refused(_:)`` if the user/wallet declines. Optional `extensions` are the
-    /// dApp's requested extensions; the wallet returns the subset it actually grants via
-    /// ``CIP30Provider/getExtensions()``.
+    /// Origin-blind enable. Kept for back-compat. Bridge callers prefer
+    /// ``enable(extensions:context:)``.
     func enable(extensions: [Extension]) async throws -> CIP30Provider
+
+    /// Whether this dApp `context.origin` has been previously approved.
+    func isEnabled(context: CIP30RequestContext) async -> Bool
+
+    /// Request access from a specific dApp `context`. Returns the full ``CIP30Provider``
+    /// on success, or throws ``APIError/refused(_:)`` if the user/wallet declines.
+    func enable(extensions: [Extension], context: CIP30RequestContext) async throws -> CIP30Provider
+
+    /// Forget the enable state for `origin` (e.g. after the user "disconnects" the dApp,
+    /// or on navigation away). Default impl is a no-op.
+    func invalidate(origin: String) async
 }
 
 extension CIP30Initial {
@@ -243,6 +314,19 @@ extension CIP30Initial {
     public func enable() async throws -> CIP30Provider {
         try await enable(extensions: [])
     }
+
+    /// Default forwards to the origin-blind variant. Wallets should override.
+    public func isEnabled(context: CIP30RequestContext) async -> Bool {
+        await isEnabled()
+    }
+
+    /// Default forwards to the origin-blind variant. Wallets should override.
+    public func enable(extensions: [Extension], context: CIP30RequestContext) async throws -> CIP30Provider {
+        try await enable(extensions: extensions)
+    }
+
+    /// Default no-op.
+    public func invalidate(origin: String) async {}
 }
 
 // MARK: - Provider protocol
@@ -296,6 +380,25 @@ public protocol CIP30Provider: Sendable {
 
     /// Submit a CBOR-encoded transaction to the chain. Returns the transaction id (hex).
     func submitTx(_ tx: Data) async throws -> String
+
+    // MARK: Context-aware overloads
+
+    /// Sign a transaction, with the requesting dApp's ``CIP30RequestContext`` so the wallet
+    /// can show the user which site is asking. Default impl forwards to
+    /// ``signTx(_:partialSign:)`` and ignores the context.
+    func signTx(_ tx: Data, partialSign: Bool, context: CIP30RequestContext?) async throws -> Data
+
+    /// Sign data, with the requesting dApp's ``CIP30RequestContext``. Default impl forwards
+    /// to ``signData(address:payload:)`` and ignores the context.
+    func signData(address: String, payload: Data, context: CIP30RequestContext?) async throws -> DataSignature
+
+    /// Submit a transaction, with the requesting dApp's ``CIP30RequestContext``. Default
+    /// impl forwards to ``submitTx(_:)`` and ignores the context.
+    func submitTx(_ tx: Data, context: CIP30RequestContext?) async throws -> String
+
+    /// Get collateral, with the requesting dApp's ``CIP30RequestContext``. Default impl
+    /// forwards to ``getCollateral(amount:)``.
+    func getCollateral(amount: Data, context: CIP30RequestContext?) async throws -> [Data]?
 }
 
 extension CIP30Provider {
@@ -309,5 +412,25 @@ extension CIP30Provider {
     /// Convenience: `signTx` defaulting to full (non-partial) signing per the spec.
     public func signTx(_ tx: Data) async throws -> Data {
         try await signTx(tx, partialSign: false)
+    }
+
+    // MARK: Context-aware default forwarders
+
+    /// Defaults forward to the non-context method. ``KeyStoreCIP30Provider`` overrides each
+    /// of these to thread the context through the wallet's per-operation approval policy.
+    public func signTx(_ tx: Data, partialSign: Bool, context: CIP30RequestContext?) async throws -> Data {
+        try await signTx(tx, partialSign: partialSign)
+    }
+
+    public func signData(address: String, payload: Data, context: CIP30RequestContext?) async throws -> DataSignature {
+        try await signData(address: address, payload: payload)
+    }
+
+    public func submitTx(_ tx: Data, context: CIP30RequestContext?) async throws -> String {
+        try await submitTx(tx)
+    }
+
+    public func getCollateral(amount: Data, context: CIP30RequestContext?) async throws -> [Data]? {
+        try await getCollateral(amount: amount)
     }
 }
