@@ -1,3 +1,9 @@
+## 0.2.2 (2026-05-15)
+
+### Fix
+
+- improve cip30 implementation
+
 ## 0.2.1 (2026-05-11)
 
 ### Fix
