@@ -1,6 +1,5 @@
 import Testing
 import Foundation
-import PotentCBOR
 import SwiftCardanoCore
 @testable import SwiftCardanoCIPs
 

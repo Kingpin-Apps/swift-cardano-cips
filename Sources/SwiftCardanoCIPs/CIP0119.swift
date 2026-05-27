@@ -5,7 +5,6 @@ import CryptoKit
 import Crypto
 #endif
 import OrderedCollections
-import PotentCBOR
 import SwiftNcal
 import SwiftCardanoCore
 

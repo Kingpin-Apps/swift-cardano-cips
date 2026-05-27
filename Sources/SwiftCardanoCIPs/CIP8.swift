@@ -1,6 +1,5 @@
 import Foundation
-import PotentCodables
-import PotentCBOR
+import CBORCodable
 import SwiftCOSE
 import OrderedCollections
 import SwiftCardanoCore
@@ -206,12 +205,14 @@ public struct CIP8 {
                     CBOR.byteString(sign1Message.payload!),
                     CBOR.byteString(signed)
                 ] as [CBOR]
-                
+
                 let cborTag = CBOR.tagged(
-                    CBOR.Tag(rawValue: UInt64(sign1Message.cborTag)),
+                    UInt64(sign1Message.cborTag),
                     .array(_message)
                 )
-                encoded = try CBOREncoder().encode(cborTag)
+                var writer = CBORWriter()
+                try writer.encode(cborTag)
+                encoded = writer.data
             case .signingKey(_):
                 encoded = try sign1Message.encode()
         }
