@@ -1,3 +1,9 @@
+## 0.3.2 (2026-05-29)
+
+### Fix
+
+- use correct name and handle test warning
+
 ## 0.3.1 (2026-05-29)
 
 ### Fix
