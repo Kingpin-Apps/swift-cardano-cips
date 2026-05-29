@@ -1,5 +1,5 @@
 {
-  "originHash" : "c8b4ef6e63e9729ada3a230687f6a170f899e1e3d3bcdfa3d6f7242d0c8a4a38",
+  "originHash" : "91328b5d2d4ea0ffe9d705f214dc94a2041092313099c16ef7b779eeafa50840",
   "pins" : [
     {
       "identity" : "base32",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/attaswift/BigInt.git",
       "state" : {
-        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
-        "version" : "5.3.0"
+        "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
+        "version" : "5.7.0"
       }
     },
     {
@@ -29,12 +29,12 @@
       }
     },
     {
-      "identity" : "digest",
+      "identity" : "float16",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/leif-ibsen/Digest.git",
+      "location" : "https://github.com/SusanDoggie/Float16.git",
       "state" : {
-        "revision" : "1b9858026d5d3cb7b371fb1683ece54a654dfb21",
-        "version" : "1.11.0"
+        "revision" : "936ae66adccf1c91bcaeeb9c0cddde78a13695c3",
+        "version" : "1.1.1"
       }
     },
     {
@@ -51,17 +51,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-asn1.git",
       "state" : {
-        "revision" : "7faebca1ea4f9aaf0cda1cef7c43aecd2311ddf6",
-        "version" : "1.3.0"
+        "revision" : "eb50cbd14606a9161cbc5d452f18797c90ef0bab",
+        "version" : "1.7.0"
       }
     },
     {
       "identity" : "swift-base58",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/KINGH242/swift-base58.git",
+      "location" : "https://github.com/Kingpin-Apps/swift-base58.git",
       "state" : {
-        "revision" : "6136881c55edc352450a7cc8088ee8e7d145bea1",
-        "version" : "0.1.2"
+        "revision" : "79043ca4d78560205e7790aec49962815e1190ed",
+        "version" : "0.1.4"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cardano-core.git",
       "state" : {
-        "revision" : "d7c28ca946094d5246dc6df1bde4d99a227108ee",
-        "version" : "0.4.0"
+        "revision" : "096243346ab6a9e6c5a57992cb1c694a9795dc52",
+        "version" : "0.4.3"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cbor-codable.git",
       "state" : {
-        "revision" : "82025e789e64527d6e5927232afa52391d6b7995",
-        "version" : "0.3.0"
+        "revision" : "51e206ef4b68703fad6fe7133c3b29a6ae25929b",
+        "version" : "0.3.2"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-certificates.git",
       "state" : {
-        "revision" : "1fbb6ef21f1525ed5faf4c95207b9c11bea27e94",
-        "version" : "1.6.1"
+        "revision" : "bde8ca32a096825dfce37467137c903418c1893d",
+        "version" : "1.19.1"
       }
     },
     {
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "d029d9d39c87bed85b1c50adee7c41795261a192",
-        "version" : "1.0.6"
+        "revision" : "fea17c02d767f46b23070fdfdacc28a03a39232a",
+        "version" : "1.5.1"
       }
     },
     {
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cose.git",
       "state" : {
-        "revision" : "48f190920dae561683531bf35b2ca57424e993ac",
-        "version" : "0.2.1"
+        "revision" : "ef9b6eecf10e1c27591740ce2893e2d017f7708e",
+        "version" : "1.2.0"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-crypto.git",
       "state" : {
-        "revision" : "95ba0316a9b733e92bb6b071255ff46263bbe7dc",
-        "version" : "3.15.1"
+        "revision" : "1b6b2e274e85105bfa155183145a1dcfd63331f1",
+        "version" : "4.5.0"
       }
     },
     {
@@ -123,8 +123,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "02d3891649ee47cc602724d9ce4a83b8bb0e27cb",
-        "version" : "0.1.4"
+        "revision" : "fc11014aba38707db117a838da94b0db39d1fdc4",
+        "version" : "0.2.3"
       }
     },
     {
@@ -137,12 +137,21 @@
       }
     },
     {
+      "identity" : "swift-goldilocks",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Kingpin-Apps/swift-goldilocks.git",
+      "state" : {
+        "revision" : "ae27bd2b74963107909f9bd5c9d1fbd4d0e0acbe",
+        "version" : "0.1.0"
+      }
+    },
+    {
       "identity" : "swift-kes",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-kes.git",
       "state" : {
-        "revision" : "38e282d16e4c1145a885d8c25c0d43115194766f",
-        "version" : "0.2.0"
+        "revision" : "1ec6d8782c3fcbad10abeb320f4e11049d830057",
+        "version" : "1.0.1"
       }
     },
     {
@@ -150,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
       "state" : {
-        "revision" : "96a2f8a0fa41e9e09af4585e2724c4e825410b91",
-        "version" : "1.6.2"
+        "revision" : "2aed77ae5ec9a86d8fe42c12275e4c2653a286ee",
+        "version" : "1.13.1"
       }
     },
     {
@@ -159,17 +168,26 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-mnemonic.git",
       "state" : {
-        "revision" : "af037bfb8964c380e387cac5c413074e6929123c",
-        "version" : "0.2.2"
+        "revision" : "b5fea69fa51b83f53b28673de31b788a0f93eb4a",
+        "version" : "0.2.5"
       }
     },
     {
-      "identity" : "swift-ncal",
+      "identity" : "swift-nacl",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Kingpin-Apps/swift-ncal.git",
+      "location" : "https://github.com/Kingpin-Apps/swift-nacl.git",
       "state" : {
-        "revision" : "d7ea3dcd60911affa52e52a7a69b7b86f01db3ed",
-        "version" : "0.3.0"
+        "revision" : "23df3eed6c4a9ac8f906260253604fdb74f7ed7f",
+        "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "swift-numerics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-numerics",
+      "state" : {
+        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+        "version" : "1.1.1"
       }
     },
     {
@@ -177,17 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/21-DOT-DEV/swift-secp256k1",
       "state" : {
-        "revision" : "cfab52e538683557259302c39ef25df60226eb30",
-        "version" : "0.23.1"
-      }
-    },
-    {
-      "identity" : "uncommoncrypto.swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tesseract-one/UncommonCrypto.swift.git",
-      "state" : {
-        "revision" : "075344faec47dadba98bef6a319e310c98be0820",
-        "version" : "0.2.1"
+        "revision" : "e70a10e036a55fffea31568f0af92d69b6d449cd",
+        "version" : "0.23.2"
       }
     },
     {
