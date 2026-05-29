@@ -4,7 +4,7 @@ import CryptoKit
 import Crypto
 #endif
 import SwiftCardanoCore
-import SwiftNcal
+import SwiftNaCl
 import Foundation
 
 /// Size of the asset hash
@@ -68,7 +68,7 @@ public struct CIP14 {
         }
         
         // Calculate BLAKE2b hash
-        let asset_hash = try SwiftNcal.Hash().blake2b(
+        let asset_hash = try SwiftNaCl.Hash().blake2b(
             data: policyIdData + assetNameData,
             digestSize: ASSET_HASH_SIZE,
             encoder: RawEncoder.self

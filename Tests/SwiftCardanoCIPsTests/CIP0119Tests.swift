@@ -38,8 +38,11 @@ func normalizeJSON(_ jsonString: String) -> String? {
     
     @Test func testInitialization() async throws {
         let drepMetadata = validDRepMetadata
-        
-        #expect(drepMetadata != nil)
+
+        #expect(drepMetadata.givenName == "Ryan Williams")
+        #expect(drepMetadata.paymentAddress == "addr1q86dnpkva4mm859c8ur7tjxn57zgsu6vg8pdetkdve3fsacnq7twy06u2ev5759vutpjgzfryx0ud8hzedhzerava35qwh3x34")
+        #expect(drepMetadata.image?.contentUrl == sampleImage.contentUrl)
+        #expect(drepMetadata.references?.count == sampleReferences.count)
     }
             
 

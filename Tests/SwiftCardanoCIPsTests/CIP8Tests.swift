@@ -149,7 +149,7 @@ import Testing
             network: .preprod
         )
 
-        #expect(signedMessage.signature != nil)
+        #expect(!signedMessage.signature.isEmpty)
         #expect(signedMessage.key != nil)
     }
 

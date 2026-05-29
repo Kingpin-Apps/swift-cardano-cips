@@ -5,7 +5,7 @@ import CryptoKit
 import Crypto
 #endif
 import OrderedCollections
-import SwiftNcal
+import SwiftNaCl
 import SwiftCardanoCore
 
 public enum CIP119Error: Error, Equatable, CustomStringConvertible {
@@ -289,7 +289,7 @@ public struct DRepMetadata: JSONSerializable {
         let json = try toJSON()!
         let jsonData = json.data(using: .utf8)!
 
-        let hash = try SwiftNcal.Hash().blake2b(
+        let hash = try SwiftNaCl.Hash().blake2b(
             data: jsonData,
             digestSize: DREP_METADATA_HASH_SIZE,
             encoder: RawEncoder.self
