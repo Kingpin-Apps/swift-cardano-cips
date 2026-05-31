@@ -1,5 +1,5 @@
 {
-  "originHash" : "91328b5d2d4ea0ffe9d705f214dc94a2041092313099c16ef7b779eeafa50840",
+  "originHash" : "d3b79f4bbbe6f54cce491948ca6bc715d0791e352e826b47c000afe5e762ccdb",
   "pins" : [
     {
       "identity" : "base32",
@@ -35,15 +35,6 @@
       "state" : {
         "revision" : "936ae66adccf1c91bcaeeb9c0cddde78a13695c3",
         "version" : "1.1.1"
-      }
-    },
-    {
-      "identity" : "openssl-package",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/krzyzanowskim/OpenSSL-Package.git",
-      "state" : {
-        "revision" : "71dbe0b4514cdaad95961470db72e8231f5943a6",
-        "version" : "3.3.3001"
       }
     },
     {
@@ -105,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cose.git",
       "state" : {
-        "revision" : "ef9b6eecf10e1c27591740ce2893e2d017f7708e",
-        "version" : "1.2.0"
+        "revision" : "d5b53e378e7143514eabcb10486595415fcce787",
+        "version" : "1.3.0"
       }
     },
     {
@@ -123,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "fc11014aba38707db117a838da94b0db39d1fdc4",
-        "version" : "0.2.3"
+        "revision" : "ce923f01d5644ad32c4986d3feea6b03078e2ab1",
+        "version" : "0.3.0"
       }
     },
     {

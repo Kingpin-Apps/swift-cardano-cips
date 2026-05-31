@@ -20,7 +20,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.0"),
         .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.2"),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", from: "1.2.0"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", from: "1.3.0"),
         .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.4.3"),
         .package(url: "https://github.com/Kingpin-Apps/swift-nacl.git", .upToNextMinor(from: "1.0.1")),
     ],
