@@ -1,3 +1,9 @@
+## 0.3.3 (2026-05-31)
+
+### Fix
+
+- update SwiftCOSE to latest
+
 ## 0.3.2 (2026-05-29)
 
 ### Fix
