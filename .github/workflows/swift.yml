@@ -23,20 +23,15 @@ jobs:
       run: swift build -v
     - name: Build and test
       run: swift test -v --parallel --enable-test-discovery
-      
-  # build:
-  #   name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
-  #   strategy:
-  #     matrix:
-  #       os: [ubuntu-latest, macos-latest]
-  #       swift: ["6.0.0"]
-  #   runs-on: ${{ matrix.os }}
-  #   steps:
-  #     - uses: swift-actions/setup-swift@65540b95f51493d65f5e59e97dcef9629ddf11bf
-  #       with:
-  #         swift-version: ${{ matrix.swift }}
-  #     - uses: actions/checkout@v4
-  #     - name: Build
-  #       run: swift build -v
-  #     - name: Run tests
-  #       run: swift test -v
+
+  linux:
+    name: Test on Linux (Swift 6.3)
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      run: swift build -v
+    - name: Build and test
+      run: swift test -v --parallel --enable-test-discovery

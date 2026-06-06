@@ -1,3 +1,4 @@
+import Foundation
 import SwiftCardanoCore
 import CryptoKit
 import Testing
@@ -151,6 +152,22 @@ import Testing
 
         #expect(!signedMessage.signature.isEmpty)
         #expect(signedMessage.key != nil)
+    }
+
+    @Test func signIsDeterministicWithAttachedCoseKey() throws {
+        let payload = Data("hello dApp".utf8)
+        let a = try CIP8.sign(payload: payload, signingKey: .signingKey(sk), attachCoseKey: true)
+        let b = try CIP8.sign(payload: payload, signingKey: .signingKey(sk), attachCoseKey: true)
+        #expect(a.signature == b.signature)
+        #expect(a.key == b.key)
+    }
+
+    @Test func signIsDeterministicWithoutAttachedCoseKey() throws {
+        let payload = Data("hello dApp".utf8)
+        let a = try CIP8.sign(payload: payload, signingKey: .signingKey(sk), attachCoseKey: false)
+        let b = try CIP8.sign(payload: payload, signingKey: .signingKey(sk), attachCoseKey: false)
+        #expect(a.signature == b.signature)
+        #expect(a.key == b.key)
     }
 
     @Test func extendedSignAndVerify() throws {

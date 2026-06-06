@@ -102,13 +102,11 @@ public struct CIP8 {
     ) throws -> SignedMessage {
         let address: Address
         let verificationKey: any VerificationKeyProtocol
-        let signingKeyPayload: Data
         let networkId = network.networkId
 
         // Derive verification key and address based on key type
         switch signingKey {
             case .signingKey(let sKey):
-                signingKeyPayload = sKey.payload
                 if sKey is StakeSigningKey {
                     let vkey: StakeVerificationKey = try sKey.toVerificationKey()
                     address = try Address(
@@ -127,7 +125,6 @@ public struct CIP8 {
                     verificationKey = vkey
                 }
             case .extendedSigningKey(let extendedSKey):
-                signingKeyPayload = extendedSKey.payload
                 if extendedSKey is StakeExtendedSigningKey {
                     let extendedVKey: StakeExtendedVerificationKey = try extendedSKey.toVerificationKey()
                     let vkey: StakeVerificationKey = try extendedVKey.toNonExtended()
@@ -174,66 +171,62 @@ public struct CIP8 {
             hashedHeader: false
         ]
         
-        // Create COSE key
-        let keyDict: [AnyHashable: Any] = [
-            OKPKpCurve(): Ed25519Curve(),
-            OKPKpX(): verificationKey.payload,
-            OKPKpD(): signingKeyPayload
-        ]
-        
-        let coseKey = try OKPKey.fromDictionary(keyDict)
-        coseKey.keyOps = [SignOp(), VerifyOp()]
-
-        // Create Sign1 message
+        // Build the Sign1 message. We sign the Sig_structure ourselves rather
+        // than going through `Sign1Message.encode()` because that path routes
+        // Ed25519 signing through CryptoKit's `Curve25519.Signing.PrivateKey
+        // .signature(for:)`, which is non-deterministic on Apple platforms
+        // (hedged signing). Routing through `signingKey.sign(data:)` uses the
+        // libsodium-backed RFC 8032 deterministic implementation, matching
+        // cardano-signer.js and the CIP-30 wallet bridge expectations.
         let sign1Message = Sign1Message(
             phdr: protectedHeader,
             uhdr: unprotectedHeader,
-            payload: payload,
-            key: coseKey
+            payload: payload
         )
-        
-        let encoded: Data
-        switch signingKey {
-            case .extendedSigningKey(let extendedSKey):
-                let signed = try extendedSKey.sign(
-                    data: try sign1Message.createSignatureStructure()
-                )
-                
-                let _message = [
-                    CBOR.byteString(sign1Message.phdrEncoded),
-                    CBOR.fromAny(sign1Message.uhdrEncoded),
-                    CBOR.byteString(sign1Message.payload!),
-                    CBOR.byteString(signed)
-                ] as [CBOR]
 
-                let cborTag = CBOR.tagged(
-                    UInt64(sign1Message.cborTag),
-                    .array(_message)
-                )
-                var writer = CBORWriter()
-                try writer.encode(cborTag)
-                encoded = writer.data
-            case .signingKey(_):
-                encoded = try sign1Message.encode()
-        }
-                
+        let signed = try signingKey.sign(
+            data: sign1Message.createSignatureStructure()
+        )
+
+        let _message: [CBOR] = [
+            .byteString(sign1Message.phdrEncoded),
+            .fromAny(sign1Message.uhdrEncoded),
+            .byteString(sign1Message.payload!),
+            .byteString(signed)
+        ]
+
+        let cborTag = CBOR.tagged(
+            UInt64(sign1Message.cborTag),
+            .array(_message)
+        )
+        var writer = CBORWriter()
+        try writer.encode(cborTag)
+        let encoded = writer.data
+
         // turn the enocded message into a hex string and remove the first byte
         let signedHex = encoded.dropFirst().toHexString()  // Drop the initial 0xD2 tag
 
         if attachCoseKey {
-            let keyToReturn = [
-                KpKty(): KtyOKP(),
-                KpAlg(): EdDSAAlgorithm(),
-                OKPKpCurve(): Ed25519Curve(),
-                OKPKpX(): verificationKey.payload
-            ] as [AnyHashable : Any]
+            // Build the attached COSE_Key map directly in canonical CBOR order
+            // (RFC 8949 §4.2.3 bytewise-lex on the encoded keys) instead of
+            // round-tripping through `CoseKey.fromDictionary(...).encode()`,
+            // which (a) iterates an unordered `[AnyHashable: Any]` store so
+            // the on-wire key order varies per process, and (b) emits a
+            // spurious empty `d` entry because `OKPKey.init` always sets
+            // `self.d = d ?? Data()`. The CIP-30 attached key must only carry
+            // the public material: kty(1), alg(3), crv(-1), x(-2).
+            let keyMap: OrderedDictionary<CBOR, CBOR> = [
+                .unsignedInt(1): .unsignedInt(1),   // kty: OKP
+                .unsignedInt(3): .negativeInt(7),  // alg: EdDSA (-8 on the wire as -1-7)
+                .negativeInt(0): .unsignedInt(6),  // crv (-1): Ed25519
+                .negativeInt(1): .byteString(verificationKey.payload), // x (-2)
+            ]
+            var keyWriter = CBORWriter()
+            try keyWriter.encode(.map(keyMap))
 
             return SignedMessage(
                 signature: signedHex,
-                key: try CoseKey
-                    .fromDictionary(keyToReturn)
-                    .encode()!
-                    .toHexString()
+                key: keyWriter.data.toHexString()
             )
         }
 
