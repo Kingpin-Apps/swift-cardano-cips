@@ -1,3 +1,10 @@
+## 0.3.4 (2026-06-06)
+
+### Fix
+
+- improve cross platform
+- add more CIPs for signer
+
 ## 0.3.3 (2026-05-31)
 
 ### Fix
