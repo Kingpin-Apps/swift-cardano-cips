@@ -89,9 +89,9 @@ public struct CIP30ApprovalPolicy: Sendable {
 /// pattern: hold many keys, keep an internal address set, and override the address
 /// accessors.
 ///
-/// **Approvals.** `signTx`, `signData`, and `submitTx` consult ``policy`` before doing
-/// any signing or network I/O. The default ``CIP30ApprovalPolicy/denyAll`` refuses
-/// everything, so every host app must supply its own policy. See ``CIP30ApprovalPolicy``.
+/// **Approvals.** `signTx`, `signData`, and `submitTx` consult the `policy` supplied at
+/// `init` before doing any signing or network I/O. The default ``CIP30ApprovalPolicy/denyAll``
+/// refuses everything, so every host app must supply its own policy. See ``CIP30ApprovalPolicy``.
 public actor KeyStoreCIP30Provider: CIP30Provider {
     public let info: WalletInfo
     public let network: Network

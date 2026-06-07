@@ -43,7 +43,7 @@ public enum CIP100Error: Error, Equatable {
 ///    witnesses are attached, so previously-attached signatures don't
 ///    contribute to the canonical form).
 /// 2. Canonicalize the resulting document with RDFC-1.0 / URDNA2015 via
-///    ``JSONLD/canonize(_:options:)``.
+///    `JSONLD.canonize(_:options:)`.
 /// 3. Take the UTF-8 bytes of the canonical N-Quads (already terminated
 ///    by a trailing newline per the canonical N-Quads serialization).
 /// 4. Hash with Blake2b-256.

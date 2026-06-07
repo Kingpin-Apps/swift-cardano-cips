@@ -62,9 +62,8 @@ public enum CIP88 {
     ///     32-byte verification key — i.e. a non-extended Ed25519 key.
     ///     The pool ID embedded in the scope field is the Blake2b-224 of
     ///     this key's verification key.
-    ///   - nonce: Per-pool monotonic nonce. Typically the current mainnet
-    ///     slot height — see ``Signer/SlotNonce`` in the signer facade.
-    /// - Returns: An ``SwiftCardanoCore/AuxiliaryData`` carrying the
+    ///   - nonce: Per-pool monotonic nonce. Typically the current mainnet slot height.
+    /// - Returns: A `SwiftCardanoCore.AuxiliaryData` carrying the
     ///   `{867: {0: 2, 1: payload, 2: [witness]}}` envelope.
     /// - Throws: ``CIP88Error`` on length / encoding / signing failures.
     public static func makeCalidusRegistration(

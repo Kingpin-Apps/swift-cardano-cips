@@ -55,17 +55,22 @@ public struct VerificationResult {
 
 public struct CIP8 {
     
-    /// Sign an arbitrary message with a payment or stake key following CIP-0008.
+    /// Sign an arbitrary byte payload with a payment or stake key following CIP-0008.
     ///
-    /// Note that a stake key passed in must be of type ``StakeSigningKey`` or ``StakeExtendedSigningKey`` to be detected.
+    /// Use this overload when the payload isn't a UTF-8 string — for example CIP-30
+    /// `signData` requests receive raw bytes.
+    ///
+    /// A stake key passed in must be a `SwiftCardanoCore.StakeSigningKey` or
+    /// `SwiftCardanoCore.StakeExtendedSigningKey` to be recognized as such; otherwise it
+    /// is treated as a payment key.
     /// - Parameters:
-    ///   - message: Message to sign
-    ///   - signingKey: Key to sign the message with
-    ///   - attachCoseKey: Whether to attach the COSE key to the signed message
-    ///   - network: Network to use for the address generation
-    /// - Returns: The signed message
-    /// Sign an arbitrary byte payload following CIP-0008. Use this when the payload is not
-    /// a UTF-8 string (e.g. CIP-30 `signData` receives raw bytes).
+    ///   - payload: Raw bytes to sign.
+    ///   - signingKey: Key to sign the payload with.
+    ///   - attachCoseKey: Whether to ship the public COSE_Key alongside the signature
+    ///     (CIP-30 `signData` shape). When `false`, the verification key is embedded in
+    ///     the protected header as `kid`.
+    ///   - network: Network to use when deriving the signing address.
+    /// - Returns: The signed message.
     public static func sign(
         payload: Data,
         signingKey: SigningKeyType,
@@ -80,6 +85,17 @@ public struct CIP8 {
         )
     }
 
+    /// Sign a UTF-8 string message with a payment or stake key following CIP-0008.
+    ///
+    /// A stake key passed in must be a `SwiftCardanoCore.StakeSigningKey` or
+    /// `SwiftCardanoCore.StakeExtendedSigningKey` to be recognized as such; otherwise it
+    /// is treated as a payment key.
+    /// - Parameters:
+    ///   - message: Message to sign. Encoded as UTF-8 before signing.
+    ///   - signingKey: Key to sign the message with.
+    ///   - attachCoseKey: Whether to ship the public COSE_Key alongside the signature.
+    ///   - network: Network to use when deriving the signing address.
+    /// - Returns: The signed message.
     public static func sign(
         message: String,
         signingKey: SigningKeyType,

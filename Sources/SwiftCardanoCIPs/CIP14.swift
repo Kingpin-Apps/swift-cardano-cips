@@ -40,8 +40,8 @@ public struct CIP14 {
     /// https://developers.cardano.org/docs/governance/cardano-improvement-proposals/cip-0014/
     ///
     /// - Parameters:
-    ///   - policyId: The asset policy as Data or a hex String or a ``PolicyId``
-    ///   - assetName: The asset name as Data or a hex String or a ``AssetName``
+    ///   - policyId: The asset policy as `Data`, a hex `String`, or a `SwiftCardanoCore.PolicyID`.
+    ///   - assetName: The asset name as `Data`, a hex `String`, or a `SwiftCardanoCore.AssetName`.
     /// - Returns: A bech32 encoded asset fingerprint
     /// - Throws: Error if the input conversion fails
     public static func encodeAsset(policyId: PolicyIdType, assetName: AssetNameType) throws -> String? {
