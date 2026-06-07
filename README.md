@@ -1,8 +1,11 @@
 # SwiftCardanoCIPs
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Kingpin-Apps/swift-cardano-cips/swift.yml)
-![GitHub Release](https://img.shields.io/github/v/release/Kingpin-Apps/swift-cardano-cips)
-![License](https://img.shields.io/github/license/Kingpin-Apps/swift-cardano-cips)
+[![CI](https://img.shields.io/github/actions/workflow/status/Kingpin-Apps/swift-cardano-cips/swift.yml?branch=main&label=CI&logo=github)](https://github.com/Kingpin-Apps/swift-cardano-cips/actions/workflows/swift.yml)
+[![Release](https://img.shields.io/github/v/release/Kingpin-Apps/swift-cardano-cips?display_name=tag&sort=semver&logo=github)](https://github.com/Kingpin-Apps/swift-cardano-cips/releases)
+[![Swift Package Index](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FKingpin-Apps%2Fswift-cardano-cips%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/Kingpin-Apps/swift-cardano-cips)
+[![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FKingpin-Apps%2Fswift-cardano-cips%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/Kingpin-Apps/swift-cardano-cips)
+[![License](https://img.shields.io/github/license/Kingpin-Apps/swift-cardano-cips)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/Kingpin-Apps/swift-cardano-cips/main?logo=github)](https://github.com/Kingpin-Apps/swift-cardano-cips/commits/main)
 
 Swift implementations of Cardano Improvement Proposals, built on
 [swift-cardano-core](https://github.com/Kingpin-Apps/swift-cardano-core).

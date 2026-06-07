@@ -1,6 +1,5 @@
 import Foundation
 import SwiftCardanoCore
-import CryptoKit
 import Testing
 
 @testable import SwiftCardanoCIPs
