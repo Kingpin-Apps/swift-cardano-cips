@@ -262,7 +262,7 @@ public struct CIP8 {
 
         // Decode the signed message
         let messageData = Data(hex: "D2" + signedMessage.signature)
-        
+
         let decodedMessage = try CoseMessage.decode(
             Sign1Message.self,
             from: messageData
@@ -292,10 +292,10 @@ public struct CIP8 {
             coseKey = try CoseKey.decode(Data(hex: keyHex))!
             verificationKey = coseKey.store[OKPKpX()] as! Data
         }
-        
+
         // attach the key to the decoded message
         decodedMessage.key = coseKey
-        
+
         // Verify signature
         let signatureVerified: Bool
         if verificationKey.count > 32 {
@@ -311,19 +311,19 @@ public struct CIP8 {
        } else {
            signatureVerified = try decodedMessage.verifySignature()
        }
-        
+
         let addressHeader = CoseHeaderAttribute(
             customIdentifier: nil,
             fullname: "address"
         )
-        
+
         let message = decodedMessage.payload!.toString
         let address = decodedMessage.phdr[addressHeader] as! Data
-        
+
         let signingAddress: Address = try Address(
             from: .bytes(address)
         )
-        
+
         // check that the address attached matches the one of the verification keys used to sign the message
         let addressesMatch: Bool
         if signingAddress.paymentPart != nil {
@@ -345,9 +345,9 @@ public struct CIP8 {
                     addressesMatch = false
             }
         }
-        
+
         let verified = signatureVerified && addressesMatch
-        
+
         return VerificationResult(
             verified: verified,
             message: message,

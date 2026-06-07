@@ -1,5 +1,5 @@
 {
-  "originHash" : "ba83c54612c6e9ddeef473bd69daae8b13d7cb09f38395e4a4cd9b9c9b85e2b4",
+  "originHash" : "aa2f39e165cf15310e5a8f17277b5c5431b774dddb2389b7a6ea3aa8c6f1c064",
   "pins" : [
     {
       "identity" : "base32",
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cose.git",
       "state" : {
-        "revision" : "d5b53e378e7143514eabcb10486595415fcce787",
-        "version" : "1.3.0"
+        "revision" : "8fe15e652bd33d9373fcc9695a3b1e5c35983076",
+        "version" : "1.3.1"
       }
     },
     {
@@ -132,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-goldilocks.git",
       "state" : {
-        "revision" : "ae27bd2b74963107909f9bd5c9d1fbd4d0e0acbe",
-        "version" : "0.1.0"
+        "revision" : "44a49050ca59c32d974af84d5828b70cea596e3f",
+        "version" : "0.1.1"
       }
     },
     {
