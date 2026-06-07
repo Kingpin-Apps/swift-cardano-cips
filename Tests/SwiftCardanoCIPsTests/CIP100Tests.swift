@@ -200,4 +200,60 @@ struct CIP100Tests {
             )
         }
     }
+
+    // MARK: - Security patches (cips 0.3.7)
+
+    @Test("malformedHex truncates a multi-kilobyte attacker-controlled hex string")
+    func malformedHexTruncatesGarbage() async throws {
+        // 4 KiB of `z` (an invalid hex character) in the signature field
+        // — a malicious doc could carry megabytes here. The error payload
+        // must be bounded so it doesn't amplify into the caller's log
+        // pipeline.
+        let garbage = String(repeating: "z", count: 4 * 1024)
+        let signed = """
+        {
+          "@context": { "@vocab": "https://example.com/cip-100#" },
+          "hashAlgorithm": "blake2b-256",
+          "body": {"comment": "x"},
+          "authors": [{
+            "name": "Bad",
+            "witness": {
+              "witnessAlgorithm": "ed25519",
+              "publicKey": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+              "signature": "\(garbage)"
+            }
+          }]
+        }
+        """.data(using: .utf8)!
+
+        do {
+            _ = try await CIP100.verifyMetadata(signed)
+            Issue.record("Expected malformedHex to throw on z-padded signature")
+        } catch let error as CIP100Error {
+            guard case let .malformedHex(payload) = error else {
+                Issue.record("Wrong CIP100Error case: \(error)")
+                return
+            }
+            // The truncation contract — payload is a bounded string, not
+            // the full 4 KiB blob.
+            #expect(payload.count <= 81, "Truncated payload should be ≤ 80 chars + ellipsis, got \(payload.count)")
+            #expect(payload.hasSuffix("…"))
+        } catch {
+            Issue.record("Wrong error type: \(error)")
+        }
+    }
+
+    @Test("truncatedForError is a no-op for inputs within the bound")
+    func truncatedForErrorIdentityShort() {
+        let short = "abcdef"
+        #expect(CIP100.truncatedForError(short) == short)
+    }
+
+    @Test("truncatedForError appends an ellipsis when over the bound")
+    func truncatedForErrorEllipsisLong() {
+        let long = String(repeating: "a", count: 200)
+        let truncated = CIP100.truncatedForError(long)
+        #expect(truncated.count == 81)   // 80 + the single-scalar ellipsis
+        #expect(truncated.hasSuffix("…"))
+    }
 }

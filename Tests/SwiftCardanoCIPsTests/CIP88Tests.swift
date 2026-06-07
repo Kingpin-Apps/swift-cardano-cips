@@ -197,6 +197,27 @@ struct CIP88Tests {
 
     // MARK: - Validation
 
+    @Test("Nonce above Int.max throws nonceOutOfRange")
+    func nonceAboveIntMaxThrows() {
+        let tooBig = UInt64(Int.max) + 1
+        do {
+            _ = try CIP88.makeCalidusRegistration(
+                calidusPublicKey: Self.calidusKey,
+                poolSigningKey: .signingKey(Self.poolSK),
+                nonce: tooBig
+            )
+            Issue.record("Expected nonceOutOfRange to throw")
+        } catch let error as CIP88Error {
+            guard case let .nonceOutOfRange(reported) = error else {
+                Issue.record("Wrong CIP88Error case: \(error)")
+                return
+            }
+            #expect(reported == tooBig)
+        } catch {
+            Issue.record("Wrong error type: \(error)")
+        }
+    }
+
     @Test("Wrong-length Calidus key throws")
     func wrongLengthCalidusKey() {
         #expect(throws: CIP88Error.self) {

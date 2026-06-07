@@ -12,6 +12,11 @@ public enum CIP88Error: Error, Equatable {
     /// The pool cold key produced a verification key of the wrong length
     /// (must be 32 bytes).
     case invalidPoolVerificationKey(Int)
+    /// The supplied nonce exceeds `Int.max` and cannot be encoded
+    /// through the underlying
+    /// ``SwiftCardanoCore/TransactionMetadatum`` `.int` case. See the
+    /// matching `CIP36Error.nonceOutOfRange(_:)` for the same trap.
+    case nonceOutOfRange(UInt64)
     /// CBOR encoding failed.
     case encodingError(String)
     /// Signing failed.
@@ -73,6 +78,12 @@ public enum CIP88 {
     ) throws -> AuxiliaryData {
         guard calidusPublicKey.count == 32 else {
             throw CIP88Error.invalidCalidusKeyLength(calidusPublicKey.count)
+        }
+        // Same `Int.max` ceiling as `CIP36Error.nonceOutOfRange` —
+        // `TransactionMetadatum.int(Int)` traps on a `UInt64` above
+        // `Int.max`. Slot-height nonces are far below this bound.
+        guard nonce <= UInt64(Int.max) else {
+            throw CIP88Error.nonceOutOfRange(nonce)
         }
 
         // Pool ID = Blake2b-224 of the pool verification key.

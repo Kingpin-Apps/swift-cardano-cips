@@ -158,6 +158,65 @@ struct CIP36Tests {
         }
     }
 
+    @Test("Nonce above Int.max throws nonceOutOfRange (registration)")
+    func nonceAboveIntMaxRejectedOnRegistration() {
+        let tooBig = UInt64(Int.max) + 1
+        do {
+            _ = try CIP36.makeRegistration(
+                delegations: [.init(votingKey: Self.votingKeyA, weight: 1)],
+                stakeSigningKey: .signingKey(Self.stakeSK),
+                rewardsAddress: try Self.makeRewardsAddress(),
+                nonce: tooBig
+            )
+            Issue.record("Expected nonceOutOfRange to throw")
+        } catch let error as CIP36Error {
+            guard case let .nonceOutOfRange(reported) = error else {
+                Issue.record("Wrong CIP36Error case: \(error)")
+                return
+            }
+            #expect(reported == tooBig)
+        } catch {
+            Issue.record("Wrong error type: \(error)")
+        }
+    }
+
+    @Test("Nonce above Int.max throws nonceOutOfRange (deregistration)")
+    func nonceAboveIntMaxRejectedOnDeregistration() {
+        let tooBig = UInt64(Int.max) + 1
+        do {
+            _ = try CIP36.makeDeregistration(
+                stakeSigningKey: .signingKey(Self.stakeSK),
+                nonce: tooBig
+            )
+            Issue.record("Expected nonceOutOfRange to throw")
+        } catch let error as CIP36Error {
+            guard case let .nonceOutOfRange(reported) = error else {
+                Issue.record("Wrong CIP36Error case: \(error)")
+                return
+            }
+            #expect(reported == tooBig)
+        } catch {
+            Issue.record("Wrong error type: \(error)")
+        }
+    }
+
+    @Test("Maximum representable nonce (Int.max) still encodes cleanly")
+    func intMaxNonceAccepted() throws {
+        let registration = try CIP36.makeRegistration(
+            delegations: [.init(votingKey: Self.votingKeyA, weight: 1)],
+            stakeSigningKey: .signingKey(Self.stakeSK),
+            rewardsAddress: try Self.makeRewardsAddress(),
+            nonce: UInt64(Int.max)
+        )
+        guard case let .metadata(metadata) = registration.data,
+              case let .map(reg) = metadata.data[61_284],
+              case let .int(encoded) = reg[.int(4)] else {
+            Issue.record("Could not unwrap nonce field")
+            return
+        }
+        #expect(encoded == Int.max)
+    }
+
     @Test("Wrong-length voting key throws")
     func wrongLengthVotingKey() {
         #expect(throws: CIP36Error.self) {

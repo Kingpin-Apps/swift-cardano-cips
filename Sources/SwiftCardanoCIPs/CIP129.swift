@@ -139,22 +139,29 @@ public enum CIP129 {
     public static func decode(
         _ bech32: String
     ) throws -> (prefix: Prefix, keyHash: Data, isScript: Bool) {
+        // Run the Bech32 pipeline exactly once. `decode(addr:)` is a
+        // checksum-validating decode + 5→8 bit conversion in one call;
+        // failure (returning `nil`) covers every Bech32 corruption case
+        // — bad checksum, non-printable chars, mixed case, missing
+        // checksum marker, etc. The HRP can be lifted from the input
+        // string directly (substring before the last `'1'`), which is
+        // safe to use *after* the decode validated the checksum.
         let decoder = Bech32()
-        let hrp: String
-        do {
-            hrp = try decoder.bech32Decode(bech32).hrp
-        } catch {
-            throw CIP129Error.malformedBech32(String(describing: error))
+        guard let payload = decoder.decode(addr: bech32) else {
+            throw CIP129Error.malformedBech32(
+                "Bech32 decode failed for input of length \(bech32.count)"
+            )
         }
+
+        // Lowercase the HRP — Bech32 is case-insensitive and the spec
+        // canonical form is lowercase.
+        guard let separatorIndex = bech32.range(of: "1", options: .backwards)?.lowerBound else {
+            throw CIP129Error.malformedBech32("Missing Bech32 checksum separator")
+        }
+        let hrp = String(bech32[..<separatorIndex]).lowercased()
 
         guard let prefix = Prefix.allCases.first(where: { $0.hrp == hrp }) else {
             throw CIP129Error.unknownPrefix(hrp)
-        }
-
-        guard let payload = decoder.decode(addr: bech32) else {
-            throw CIP129Error.malformedBech32(
-                "Bech32 payload bit-conversion failed for \(bech32)"
-            )
         }
 
         guard payload.count == 29 else {

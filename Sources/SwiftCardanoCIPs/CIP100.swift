@@ -20,9 +20,21 @@ public enum CIP100Error: Error, Equatable {
     /// An unsupported `witnessAlgorithm` value was encountered.
     case unsupportedWitnessAlgorithm(String)
     /// The hex-encoded witness key or signature could not be decoded.
+    ///
+    /// The associated string is the offending hex value truncated to a
+    /// safe prefix (≤ 80 chars + ellipsis) — never the full input.
+    /// Witness fields are attacker-controlled in CIP-100 documents; a
+    /// multi-megabyte garbage string would otherwise amplify into log /
+    /// error sinks. See ``CIP100/truncatedForError(_:)``.
     case malformedHex(String)
     /// JSON-LD canonicalization failed.
     case canonicalizationFailed(String)
+    /// Ed25519 signing of the canonical body hash failed.
+    ///
+    /// Distinct from ``canonicalizationFailed(_:)`` so callers can
+    /// tell a broken signing key from a broken JSON-LD document —
+    /// matching the shape of `CIP36Error` and `CIP88Error`.
+    case signingError(String)
     /// Re-serializing the modified document to JSON failed.
     case serializationFailed(String)
 }
@@ -132,7 +144,7 @@ public enum CIP100 {
         do {
             signature = try signingKey.sign(data: hash)
         } catch {
-            throw CIP100Error.canonicalizationFailed("signing failed: \(error)")
+            throw CIP100Error.signingError(String(describing: error))
         }
 
         // 4. Recover the verification key (chain code stripped for
@@ -205,13 +217,13 @@ public enum CIP100 {
             }
 
             guard let pubKey = Data(hexLowercase: pubHex) else {
-                throw CIP100Error.malformedHex(pubHex)
+                throw CIP100Error.malformedHex(Self.truncatedForError(pubHex))
             }
             guard pubKey.count == 32 else {
                 throw CIP100Error.invalidPublicKeyLength(pubKey.count)
             }
             guard let signature = Data(hexLowercase: sigHex) else {
-                throw CIP100Error.malformedHex(sigHex)
+                throw CIP100Error.malformedHex(Self.truncatedForError(sigHex))
             }
             guard signature.count == 64 else {
                 throw CIP100Error.invalidSignatureLength(signature.count)
@@ -318,6 +330,21 @@ public enum CIP100 {
 
     private static func hexString(_ data: Data) -> String {
         data.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Truncate an attacker-controlled string before placing it into a
+    /// `CIP100Error` payload, so a malicious document with a multi-MB
+    /// `signature` or `publicKey` field doesn't amplify into the
+    /// caller's log / error pipeline. Internal helper used by the
+    /// witness-decoding error sites.
+    ///
+    /// Cap at 80 characters — enough to identify the offending value at
+    /// a glance for debugging (a well-formed Ed25519 signature is 128
+    /// hex chars; 80 is plenty to spot a malformed prefix), but bounded
+    /// so the error payload is always a constant-size string.
+    static func truncatedForError(_ input: String, maxLength: Int = 80) -> String {
+        guard input.count > maxLength else { return input }
+        return String(input.prefix(maxLength)) + "…"
     }
 }
 

@@ -21,7 +21,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.0"),
         .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.2"),
         .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", from: "1.3.1"),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.4.5"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.4.6"),
         .package(url: "https://github.com/Kingpin-Apps/swift-nacl.git", .upToNextMinor(from: "1.0.2")),
         .package(url: "https://github.com/Kingpin-Apps/swift-jsonld.git", .upToNextMinor(from: "0.1.3")),
     ],

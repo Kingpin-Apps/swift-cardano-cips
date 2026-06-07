@@ -12,6 +12,16 @@ public enum CIP36Error: Error, Equatable {
     case noDelegations
     /// The signing key produced a stake credential of the wrong length.
     case invalidStakeCredentialLength(Int)
+    /// The supplied nonce or voting purpose exceeds `Int.max` and
+    /// cannot be encoded through the underlying
+    /// ``SwiftCardanoCore/TransactionMetadatum`` `.int` case.
+    ///
+    /// Mainnet slot heights are vastly below `Int.max` (≈ 1.4×10⁸ at
+    /// time of writing vs `Int.max` = 9.2×10¹⁸), so this is a
+    /// theoretical guard — but the public API takes `UInt64`, and
+    /// throwing a clean error here beats a runtime trap inside the
+    /// metadata encoder.
+    case nonceOutOfRange(UInt64)
     /// CBOR encoding failed.
     case encodingError(String)
     /// Signing failed.
@@ -100,6 +110,16 @@ public enum CIP36 {
                 throw CIP36Error.invalidVotingKeyLength(d.votingKey.count)
             }
         }
+        // The `.int(Int)` case of `TransactionMetadatum` would trap on a
+        // `UInt64` above `Int.max`. Mainnet slot heights are nowhere
+        // near this bound (≈ 1.4×10⁸ << `Int.max`), but the public API
+        // takes `UInt64` and a clean throw beats a runtime trap.
+        guard nonce <= UInt64(Int.max) else {
+            throw CIP36Error.nonceOutOfRange(nonce)
+        }
+        guard votingPurpose <= UInt64(Int.max) else {
+            throw CIP36Error.nonceOutOfRange(votingPurpose)
+        }
 
         let stakeCredential = try deriveStakeCredential(from: stakeSigningKey)
 
@@ -144,6 +164,13 @@ public enum CIP36 {
         nonce: UInt64,
         votingPurpose: UInt64 = 0
     ) throws -> AuxiliaryData {
+        guard nonce <= UInt64(Int.max) else {
+            throw CIP36Error.nonceOutOfRange(nonce)
+        }
+        guard votingPurpose <= UInt64(Int.max) else {
+            throw CIP36Error.nonceOutOfRange(votingPurpose)
+        }
+
         let stakeCredential = try deriveStakeCredential(from: stakeSigningKey)
 
         var deregMap = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
