@@ -351,6 +351,7 @@ private extension JSONLD.JSON {
             )
         }
         if let num = value as? NSNumber {
+            #if canImport(Darwin)
             if CFGetTypeID(num) == CFBooleanGetTypeID() {
                 return .bool(num.boolValue)
             }
@@ -365,6 +366,21 @@ private extension JSONLD.JSON {
             default:
                 return .int(num.int64Value)
             }
+            #else
+            // swift-corelibs-foundation (Linux/Windows) doesn't expose the
+            // CFNumber bridging APIs, but NSNumber.objCType returns the same
+            // Objective-C type encodings. JSONSerialization wraps booleans
+            // with 'c' (or 'B'), floats with 'f'/'d', and everything else is
+            // an integer.
+            switch num.objCType.pointee {
+            case 0x63 /* 'c' */, 0x42 /* 'B' */:
+                return .bool(num.boolValue)
+            case 0x66 /* 'f' */, 0x64 /* 'd' */:
+                return .double(num.doubleValue)
+            default:
+                return .int(num.int64Value)
+            }
+            #endif
         }
         // Fallback for anything else — represent as string so we don't
         // silently drop data, but it should never trigger for output of
