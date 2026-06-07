@@ -1,3 +1,9 @@
+## 0.3.6 (2026-06-07)
+
+### Fix
+
+- update swift-cose to latest
+
 ## 0.3.5 (2026-06-06)
 
 ### Fix
