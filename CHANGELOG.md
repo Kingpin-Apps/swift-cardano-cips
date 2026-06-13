@@ -1,3 +1,9 @@
+## 0.3.8 (2026-06-13)
+
+### Feat
+
+- add CIP-1855 minting policy key support
+
 ## 0.3.7 (2026-06-07)
 
 ### Fix
