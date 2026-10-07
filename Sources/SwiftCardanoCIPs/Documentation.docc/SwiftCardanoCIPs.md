@@ -12,6 +12,10 @@ and exposes one entry point per CIP. Most are pure value APIs (static
 functions on a CIP-named type), and a couple — most notably CIP-100 and
 the CIP-30 web bridge — own a small amount of state.
 
+CIP-21, whether hardware wallets can sign a transaction, is its own
+product, `SwiftCardanoCIP21`, so transaction builders can use it alone. It is
+re-exported here, as `CIP21`.
+
 ```swift
 import SwiftCardanoCIPs
 

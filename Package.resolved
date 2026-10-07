@@ -1,5 +1,5 @@
 {
-  "originHash" : "6ba3c9b7618d7fc61bfaf017e32c58350e67aa353ff23de2990dac26f0bbf26e",
+  "originHash" : "e5fbe920e49f347ffd8522d19377358ac105cd2ac17622e365e6c790068d02e8",
   "pins" : [
     {
       "identity" : "base32",
@@ -96,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cose.git",
       "state" : {
-        "revision" : "8fe15e652bd33d9373fcc9695a3b1e5c35983076",
-        "version" : "1.3.1"
+        "revision" : "f40021aafcede663edf7d7f0de92df7fc51b0f27",
+        "version" : "1.3.2"
       }
     },
     {

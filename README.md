@@ -16,6 +16,7 @@ IDs, and stand up a CIP-30 wallet for a `WKWebView` dApp surface.
 | CIP   | What you get                                                                 | Type   |
 | ----- | ---------------------------------------------------------------------------- | ------ |
 | [CIP-8](#cip-8--message-signing)   | COSE_Sign1 message signing / verification with optional COSE_Key      | sign   |
+| [CIP-21](#cip-21--hardware-wallet-transactions) | Whether hardware wallets can sign a transaction, and writing a body the way they ask | tx    |
 | [CIP-14](#cip-14--native-asset-fingerprint) | `asset1…` bech32 fingerprints for native assets                | utility |
 | [CIP-30](#cip-30--dapp-connector-for-wkwebview) | `window.cardano.<wallet>` bridge for `WKWebView`, plus a reference key-store provider | bridge |
 | [CIP-36](#cip-36--catalyst-voting-registration) | Catalyst voting registration & deregistration metadata          | tx-meta |
@@ -99,6 +100,33 @@ Notes:
 - `attachCoseKey: true` ships the public COSE_Key alongside the signature
   (CIP-30 `signData` shape). `attachCoseKey: false` embeds the verification
   key in the protected header (kid).
+
+## CIP-21 — hardware wallet transactions
+
+[`CIP-21`](https://cips.cardano.org/cip/CIP-0021) sets out how a
+transaction must be written for Ledger, Trezor and Keystone to sign it. It
+is its own product, `SwiftCardanoCIP21`, with no dependencies, so a
+transaction builder can use it without the rest of this package.
+
+```swift
+import SwiftCardanoCIP21
+
+let report = try CIP21.report(transactionCBOR)
+report.mode          // .ordinary, .multisig, .plutus or .poolRegistration
+report.isCompatible  // false: report.findings says why, and whether each is fixable
+
+let body = try CIP21.compatibleBody(bodyCBOR)
+```
+
+- `report` reads the CBOR as written: canonical encoding, empty
+  collections, sets tagged 258 everywhere or nowhere, certificates hardware
+  wallets refuse, and a pool registration that is not alone.
+- `compatibleBody` writes a body canonically, leaves out empty collections
+  and tags every set. The bytes change, and with them the transaction id and
+  the size the fee is charged on, so call it while building, before the fee
+  is worked out. `swift-cardano-txbuilder` does this with
+  `cip21Compatible`. Rewriting the body of a transaction that is already
+  built leaves its fee sized for other bytes, and the node refuses it.
 
 ## CIP-14 — native asset fingerprint
 
