@@ -1,3 +1,9 @@
+## 0.4.0 (2026-10-07)
+
+### Feat
+
+- **cip21**: check transactions for hardware wallets, and write bodies the CIP-21 way
+
 ## 0.3.8 (2026-06-13)
 
 ### Feat
