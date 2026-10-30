@@ -1,3 +1,10 @@
+## 0.4.1 (2026-10-30)
+
+### Fix
+
+- **cip36**: encode a delegation weight without trapping on 32-bit Int
+- build against swift-cardano-core 0.10
+
 ## 0.4.0 (2026-10-07)
 
 ### Feat
