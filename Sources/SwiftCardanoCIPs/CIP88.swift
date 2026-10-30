@@ -1,6 +1,5 @@
 import Foundation
 import CBORCodable
-import OrderedCollections
 import SwiftCardanoCore
 import SwiftNaCl
 

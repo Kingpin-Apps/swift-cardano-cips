@@ -1,6 +1,6 @@
+import BigInt
 import Foundation
 import CBORCodable
-import OrderedCollections
 import SwiftCardanoCore
 import SwiftNaCl
 
@@ -130,7 +130,7 @@ public enum CIP36 {
             delegations.map { d in
                 .list([
                     .bytes(d.votingKey),
-                    .int(Int(d.weight)),
+                    .integer(BigInt(d.weight)),
                 ])
             }
         )

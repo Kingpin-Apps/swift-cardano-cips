@@ -22,6 +22,7 @@ let package = Package(
             targets: ["SwiftCardanoCIP21"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/attaswift/BigInt.git", "5.7.0"..<"7.0.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.0"),
         .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.2"),
         // 1.3.2 takes BigInt 6 as well as 5, so this package can sit beside apps on BigInt 6.
@@ -36,6 +37,7 @@ let package = Package(
             name: "SwiftCardanoCIPs",
             dependencies: [
                 "SwiftCardanoCIP21",
+                "BigInt",
                 .product(name: "CBORCodable", package: "swift-cbor-codable"),
                 .product(name: "SwiftCOSE", package: "swift-cose"),
                 .product(name: "SwiftCardanoCore", package: "swift-cardano-core"),
