@@ -135,14 +135,14 @@ public enum CIP36 {
             }
         )
 
-        var registrationMap = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
-        registrationMap[.int(1)] = delegationsMetadatum
-        registrationMap[.int(2)] = .bytes(stakeCredential)
-        registrationMap[.int(3)] = .bytes(rewardsAddress.toBytes())
-        registrationMap[.int(4)] = .int(Int(nonce))
-        registrationMap[.int(5)] = .int(Int(votingPurpose))
-
-        let registration: TransactionMetadatum = .map(registrationMap)
+        // Keys in ascending order: the CBOR of this map is what gets signed.
+        let registration: TransactionMetadatum = .map(MapPairs([
+            (.int(1), delegationsMetadatum),
+            (.int(2), .bytes(stakeCredential)),
+            (.int(3), .bytes(rewardsAddress.toBytes())),
+            (.int(4), .int(Int(nonce))),
+            (.int(5), .int(Int(votingPurpose))),
+        ]))
 
         return try buildSignedAuxiliaryData(
             payloadLabel: registrationLabel,
@@ -173,10 +173,11 @@ public enum CIP36 {
 
         let stakeCredential = try deriveStakeCredential(from: stakeSigningKey)
 
-        var deregMap = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
-        deregMap[.int(1)] = .bytes(stakeCredential)
-        deregMap[.int(2)] = .int(Int(nonce))
-        deregMap[.int(3)] = .int(Int(votingPurpose))
+        let deregMap: MapPairs<TransactionMetadatum, TransactionMetadatum> = MapPairs([
+            (.int(1), .bytes(stakeCredential)),
+            (.int(2), .int(Int(nonce))),
+            (.int(3), .int(Int(votingPurpose))),
+        ])
 
         return try buildSignedAuxiliaryData(
             payloadLabel: deregistrationLabel,
@@ -248,8 +249,9 @@ public enum CIP36 {
             throw CIP36Error.signingError(String(describing: error))
         }
 
-        var witnessMap = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
-        witnessMap[.int(1)] = .bytes(signature)
+        let witnessMap: MapPairs<TransactionMetadatum, TransactionMetadatum> = MapPairs([
+            (.int(1), .bytes(signature)),
+        ])
 
         // Bundle payload + witness into a Metadata, wrap as AuxiliaryData.
         let metadata = try Metadata([

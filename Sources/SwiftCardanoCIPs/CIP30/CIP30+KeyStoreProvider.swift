@@ -284,7 +284,12 @@ public actor KeyStoreCIP30Provider: CIP30Provider {
         // only when the body actually needs it — appending it unconditionally bloats the
         // witness set and exposes the stake key signature for transactions that don't
         // need it.
-        let bodyHash = body.hash()
+        let bodyHash: Data
+        do {
+            bodyHash = try body.hash()
+        } catch {
+            throw TxSignError.proofGeneration("Could not hash transaction body: \(error)")
+        }
         var witnesses: [VerificationKeyWitness] = []
 
         let paymentSig = try paymentKey.sign(data: bodyHash)

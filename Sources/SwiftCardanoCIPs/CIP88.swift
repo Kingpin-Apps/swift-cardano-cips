@@ -119,20 +119,21 @@ public enum CIP88 {
         // tooling can deterministically reconstruct the same CBOR bytes
         // when re-verifying the witness.
         // -------------------------------------------------------------
-        var payload = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
-        // 1: scope = [stakePoolScopeID, poolID]
-        payload[.int(1)] = .list([
-            .int(stakePoolScopeID),
-            .bytes(poolID),
+        let payload: MapPairs<TransactionMetadatum, TransactionMetadatum> = MapPairs([
+            // 1: scope = [stakePoolScopeID, poolID]
+            (.int(1), .list([
+                .int(stakePoolScopeID),
+                .bytes(poolID),
+            ])),
+            // 2: feature_set = []  (no extra features for plain Calidus)
+            (.int(2), .list([])),
+            // 3: validation_method = [ed25519ValidationMethod]
+            (.int(3), .list([.int(ed25519ValidationMethod)])),
+            // 4: nonce
+            (.int(4), .int(Int(nonce))),
+            // 7: calidus_key
+            (.int(7), .bytes(calidusPublicKey)),
         ])
-        // 2: feature_set = []  (no extra features for plain Calidus)
-        payload[.int(2)] = .list([])
-        // 3: validation_method = [ed25519ValidationMethod]
-        payload[.int(3)] = .list([.int(ed25519ValidationMethod)])
-        // 4: nonce
-        payload[.int(4)] = .int(Int(nonce))
-        // 7: calidus_key
-        payload[.int(7)] = .bytes(calidusPublicKey)
 
         let payloadMetadatum: TransactionMetadatum = .map(payload)
 
@@ -183,10 +184,11 @@ public enum CIP88 {
         //   1: 32-byte verification key
         //   2: 64-byte signature
         // -------------------------------------------------------------
-        var witnessMap = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
-        witnessMap[.int(0)] = .int(ed25519WitnessType)
-        witnessMap[.int(1)] = .bytes(poolVKey)
-        witnessMap[.int(2)] = .bytes(signature)
+        let witnessMap: MapPairs<TransactionMetadatum, TransactionMetadatum> = MapPairs([
+            (.int(0), .int(ed25519WitnessType)),
+            (.int(1), .bytes(poolVKey)),
+            (.int(2), .bytes(signature)),
+        ])
 
         // -------------------------------------------------------------
         // Top-level CIP-88 envelope (CIP-151 §3).
@@ -195,10 +197,11 @@ public enum CIP88 {
         //   1: payload
         //   2: witnesses (array of witness maps)
         // -------------------------------------------------------------
-        var envelope = OrderedDictionary<TransactionMetadatum, TransactionMetadatum>()
-        envelope[.int(0)] = .int(protocolVersion)
-        envelope[.int(1)] = payloadMetadatum
-        envelope[.int(2)] = .list([.map(witnessMap)])
+        let envelope: MapPairs<TransactionMetadatum, TransactionMetadatum> = MapPairs([
+            (.int(0), .int(protocolVersion)),
+            (.int(1), payloadMetadatum),
+            (.int(2), .list([.map(witnessMap)])),
+        ])
 
         let metadata = try Metadata([
             metadataLabel: .map(envelope),

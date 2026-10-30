@@ -350,7 +350,7 @@ import Testing
         let stakeVKey: StakeVerificationKey = try Self.fixtures.stakeSK.toVerificationKey()
         let stakeHash = try stakeVKey.hash()
         let cert = Certificate.stakeRegistration(
-            StakeRegistration(stakeCredential: StakeCredential(credential: .verificationKeyHash(stakeHash)))
+            try StakeRegistration(stakeCredential: StakeCredential(credential: .verificationKeyHash(stakeHash)))
         )
         let txCBOR = try Self.minimalTxCBOR(certificates: [cert])
 
@@ -368,7 +368,7 @@ import Testing
         // not the partial-sign gate.
         let strangerHash = VerificationKeyHash(payload: Data(repeating: 0xAB, count: 28))
         let cert = Certificate.stakeRegistration(
-            StakeRegistration(stakeCredential: StakeCredential(credential: .verificationKeyHash(strangerHash)))
+            try StakeRegistration(stakeCredential: StakeCredential(credential: .verificationKeyHash(strangerHash)))
         )
         let txCBOR = try Self.minimalTxCBOR(certificates: [cert])
 
