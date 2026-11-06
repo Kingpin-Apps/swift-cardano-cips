@@ -103,7 +103,7 @@ public struct CIP8 {
         network: Network = .mainnet
     ) throws -> SignedMessage {
         return try _sign(
-            payload: message.data(using: .utf8)!,
+            payload: Data(message.utf8),
             signingKey: signingKey,
             attachCoseKey: attachCoseKey,
             network: network
@@ -210,7 +210,7 @@ public struct CIP8 {
             // `OrderedDictionary<CoseHeaderAttribute, Any>` and silently gives
             // `null`, which isn't a valid COSE unprotected header.
             .map([.textString("hashed"): .boolean(false)]),
-            .byteString(sign1Message.payload!),
+            .byteString(payload),
             .byteString(signed)
         ]
 
@@ -254,87 +254,68 @@ public struct CIP8 {
     
     /// Verify the signature of a COSESign1 message and decode its contents following CIP-0008.
     ///
-    /// Supports messages signed by browser wallets or `Message.sign()`.
+    /// Supports messages signed by browser wallets (CIP-30 `signData`) or ``sign(message:signingKey:attachCoseKey:network:)``.
+    ///
+    /// The input is untrusted: anything that isn't a well-formed CIP-8 COSE_Sign1 throws
+    /// a ``CIP8Error`` rather than trapping. That covers bad hex or CBOR, a missing or
+    /// non-byte-string `address` header, an algorithm other than EdDSA, a detached
+    /// (`null`) payload, and a verification key that is missing or isn't an Ed25519 key
+    /// of 32 bytes (or 64 bytes with a chain code, in the `kid` header).
     ///
     /// - Parameter signedMessage: Message to be verified
-    /// - Returns: The verification result
+    /// - Returns: The verification result. ``VerificationResult/verified`` is `false`
+    ///   when the signature doesn't match the key or the address doesn't belong to it.
+    /// - Throws: ``CIP8Error`` for malformed input, or an address decoding error when the
+    ///   `address` header bytes aren't a valid Cardano address.
     public static func verify(
         signedMessage: SignedMessage
     ) throws -> VerificationResult {
-        let hasAttachedKey = signedMessage.key != nil
+        let sign1 = try DecodedSign1(hex: signedMessage.signature)
 
-        // Decode the signed message
-        let messageData = Data(hex: "D2" + signedMessage.signature)
-
-        let decodedMessage = try CoseMessage.decode(
-            Sign1Message.self,
-            from: messageData
-        ) as Sign1Message
-
-        // Get or create COSE key
-        let coseKey: CoseKey
+        // The 32-byte Ed25519 public key that signed the message.
         let verificationKey: Data
-        if !hasAttachedKey {
-            guard let verificationKeyData = decodedMessage.phdr[KID()] as? Data else {
-                throw CIP8Error.invalidKey("Key must be attached if hasAttachedKey is False")
-            }
-
-            let coseKeyDict = [
-                KpKty(): KtyOKP(),
-                OKPKpCurve(): Ed25519Curve(),
-                KpKeyOps(): [SignOp(), VerifyOp()],
-                OKPKpX(): verificationKeyData
-            ] as [AnyHashable : Any]
-
-            coseKey = try CoseKey.fromDictionary(coseKeyDict)
-            verificationKey = verificationKeyData
+        if let keyHex = signedMessage.key {
+            verificationKey = try attachedKey(hex: keyHex)
         } else {
-            guard let keyHex = signedMessage.key else {
-                throw CIP8Error.invalidKey("Key must be a hex string if hasAttachedKey is True")
+            guard let kid = sign1.protected[.unsignedInt(4)] else {
+                throw CIP8Error.invalidKey(
+                    "No verification key: attach a COSE_Key or put the key in the kid header"
+                )
             }
-            coseKey = try CoseKey.decode(Data(hex: keyHex))!
-            verificationKey = coseKey.store[OKPKpX()] as! Data
+            guard case .byteString(let kidData) = kid else {
+                throw CIP8Error.invalidKey("The kid header must be a byte string")
+            }
+            switch kidData.count {
+            case 32:
+                verificationKey = kidData
+            case 64:
+                // An extended key (public key + chain code): the chain code plays no
+                // part in signing or in the key hash.
+                verificationKey = kidData.prefix(32)
+            default:
+                throw CIP8Error.invalidKey(
+                    "The kid header must be a 32-byte key or a 64-byte extended key, got \(kidData.count) bytes"
+                )
+            }
         }
 
-        // attach the key to the decoded message
-        decodedMessage.key = coseKey
+        let paymentKey = try PaymentVerificationKey(payload: verificationKey)
 
-        // Verify signature
-        let signatureVerified: Bool
-        if verificationKey.count > 32 {
-           let vk = BIP32ED25519PublicKey(
-               publicKey: verificationKey.subdata(in: 0..<32),
-               chainCode: verificationKey.subdata(in: 32..<64)
-           )
-            _ = try vk.verify(
-               signature: decodedMessage.signature,
-               message: decodedMessage.createSignatureStructure()
-           )
-            signatureVerified = true
-       } else {
-           signatureVerified = try decodedMessage.verifySignature()
-       }
+        // Ed25519 over the Sig_structure (RFC 9052 §4.4), built from the protected
+        // header bytes exactly as received.
+        let signatureVerified = (try? paymentKey.verify(
+            signature: sign1.signature,
+            data: try sign1.signatureStructure()
+        )) ?? false
 
-        let addressHeader = CoseHeaderAttribute(
-            customIdentifier: nil,
-            fullname: "address"
-        )
-
-        let message = decodedMessage.payload!.toString
-        let address = decodedMessage.phdr[addressHeader] as! Data
-
-        let signingAddress: Address = try Address(
-            from: .bytes(address)
-        )
+        let signingAddress: Address = try Address(from: .bytes(sign1.address))
 
         // check that the address attached matches the one of the verification keys used to sign the message
         let addressesMatch: Bool
         if signingAddress.paymentPart != nil {
             switch signingAddress.paymentPart {
                 case .verificationKeyHash(let hash):
-                    addressesMatch = try PaymentVerificationKey(
-                        payload: verificationKey
-                    ).hash() == hash
+                    addressesMatch = try paymentKey.hash() == hash
                 default:
                     addressesMatch = false
             }
@@ -349,13 +330,174 @@ public struct CIP8 {
             }
         }
 
-        let verified = signatureVerified && addressesMatch
-
         return VerificationResult(
-            verified: verified,
-            message: message,
+            verified: signatureVerified && addressesMatch,
+            message: sign1.payload.toString,
             signingAddress: signingAddress
         )
     }
+
+    /// The public key from an attached CIP-30 COSE_Key: an OKP key (kty 1) on Ed25519
+    /// (crv 6) for EdDSA (alg -8), with a 32-byte `x`.
+    private static func attachedKey(hex: String) throws -> Data {
+        guard let bytes = Data(strictHex: hex) else {
+            throw CIP8Error.invalidKey("The COSE_Key is not valid hex")
+        }
+        let decoded: CBOR
+        do {
+            decoded = try decodeSingleCBOR(bytes)
+        } catch {
+            throw CIP8Error.invalidKey("The COSE_Key is not valid CBOR: \(error)")
+        }
+        guard case .map(let key) = decoded else {
+            throw CIP8Error.invalidKey("The COSE_Key must be a CBOR map")
+        }
+        guard key[.unsignedInt(1)] == .unsignedInt(1) else {
+            throw CIP8Error.invalidKey("The COSE_Key must be an OKP key (kty 1)")
+        }
+        if let alg = key[.unsignedInt(3)], alg != .negativeInt(7) {
+            throw CIP8Error.invalidKey("The COSE_Key algorithm must be EdDSA (-8)")
+        }
+        if let crv = key[.negativeInt(0)], crv != .unsignedInt(6) {
+            throw CIP8Error.invalidKey("The COSE_Key curve must be Ed25519 (6)")
+        }
+        guard case .byteString(let x)? = key[.negativeInt(1)], x.count == 32 else {
+            throw CIP8Error.invalidKey("The COSE_Key x must be a 32-byte public key")
+        }
+        return x
+    }
 }
 
+/// A COSE_Sign1 message (RFC 9052 §4.2) parsed strictly from untrusted hex, with the
+/// CIP-8 headers this package relies on checked up front.
+private struct DecodedSign1 {
+    let protectedBytes: Data
+    let protected: OrderedDictionary<CBOR, CBOR>
+    let payload: Data
+    let signature: Data
+    let address: Data
+
+    init(hex: String) throws {
+        guard let bytes = Data(strictHex: hex), !bytes.isEmpty else {
+            throw CIP8Error.decodingError("The signature is not valid hex")
+        }
+        let decoded: CBOR
+        do {
+            decoded = try decodeSingleCBOR(bytes)
+        } catch {
+            throw CIP8Error.decodingError("The signature is not valid CBOR: \(error)")
+        }
+        guard case .array(let items) = decoded, items.count == 4 else {
+            throw CIP8Error.decodingError(
+                "A COSE_Sign1 is an untagged array of [protected, unprotected, payload, signature]"
+            )
+        }
+        guard case .byteString(let protectedBytes) = items[0] else {
+            throw CIP8Error.decodingError("The protected header must be a byte string")
+        }
+        switch items[1] {
+        case .map:
+            break
+        case .null:
+            // Messages signed by earlier versions of this package carry `null` here.
+            // The unprotected header isn't signed and verification reads nothing
+            // from it, so accept them.
+            break
+        default:
+            throw CIP8Error.decodingError("The unprotected header must be a map")
+        }
+        let payload: Data
+        switch items[2] {
+        case .byteString(let data):
+            payload = data
+        case .null:
+            throw CIP8Error.decodingError("Detached payloads are not supported")
+        default:
+            throw CIP8Error.decodingError("The payload must be a byte string")
+        }
+        guard case .byteString(let signature) = items[3] else {
+            throw CIP8Error.invalidSignature("The signature must be a byte string")
+        }
+
+        let protected: OrderedDictionary<CBOR, CBOR>
+        if protectedBytes.isEmpty {
+            protected = [:]
+        } else {
+            let header: CBOR
+            do {
+                header = try decodeSingleCBOR(protectedBytes)
+            } catch {
+                throw CIP8Error.decodingError("The protected header is not valid CBOR: \(error)")
+            }
+            guard case .map(let map) = header else {
+                throw CIP8Error.decodingError("The protected header must be a map")
+            }
+            protected = map
+        }
+
+        // alg (1) must be EdDSA (-8).
+        guard protected[.unsignedInt(1)] == .negativeInt(7) else {
+            throw CIP8Error.invalidSignature("The protected header algorithm must be EdDSA (-8)")
+        }
+        guard let addressItem = protected[.textString("address")] else {
+            throw CIP8Error.invalidAddress("The protected header has no address")
+        }
+        guard case .byteString(let address) = addressItem, !address.isEmpty else {
+            throw CIP8Error.invalidAddress("The address header must be a non-empty byte string")
+        }
+
+        self.protectedBytes = protectedBytes
+        self.protected = protected
+        self.payload = payload
+        self.signature = signature
+        self.address = address
+    }
+
+    /// `Sig_structure = ["Signature1", protected, external_aad = h'', payload]`.
+    func signatureStructure() throws -> Data {
+        var writer = CBORWriter()
+        try writer.encode(.array([
+            .textString("Signature1"),
+            .byteString(protectedBytes),
+            .byteString(Data()),
+            .byteString(payload),
+        ]))
+        return writer.data
+    }
+}
+
+/// Decode exactly one CBOR item, rejecting trailing bytes and duplicate map keys.
+private func decodeSingleCBOR(_ bytes: Data) throws -> CBOR {
+    var reader = CBORReader(bytes)
+    return try reader.decodeTopLevel()
+}
+
+private extension Data {
+    /// Decode a hex string, upper or lower case. `nil` on odd length or any non-hex
+    /// character, rather than silently decoding to empty bytes.
+    init?(strictHex hex: String) {
+        let scalars = Array(hex.unicodeScalars)
+        guard scalars.count.isMultiple(of: 2) else { return nil }
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(scalars.count / 2)
+        var index = 0
+        while index < scalars.count {
+            guard let hi = Self.nibble(scalars[index]),
+                  let lo = Self.nibble(scalars[index + 1]) else {
+                return nil
+            }
+            bytes.append(hi << 4 | lo)
+            index += 2
+        }
+        self.init(bytes)
+    }
+
+    private static func nibble(_ scalar: Unicode.Scalar) -> UInt8? {
+        switch scalar.value {
+        case 0x30...0x39: return UInt8(scalar.value - 0x30)
+        case 0x41...0x46: return UInt8(scalar.value - 0x41 + 10)
+        case 0x61...0x66: return UInt8(scalar.value - 0x61 + 10)
+        default: return nil
+        }
+    }
+}

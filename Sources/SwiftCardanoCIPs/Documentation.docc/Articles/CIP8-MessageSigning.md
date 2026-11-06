@@ -92,17 +92,31 @@ to be `true`:
 
 ## Errors
 
-``CIP8Error`` covers some of the cases where the inputs are structurally
-invalid, such as a missing verification key. Errors from the underlying
-COSE, CBOR and address decoding are thrown as they are, so catch `Error`
-rather than only ``CIP8Error``.
+`verify` takes untrusted input, such as a dApp's or wallet's signed message,
+so a malformed message throws rather than trapping. ``CIP8Error`` covers the
+structure:
 
-A signature that doesn't match a 32-byte verification key, or an address
-that doesn't belong to the signing key, surfaces as
-``VerificationResult/verified`` = `false`, not as a throw. Messages signed
-by this package always carry a 32-byte key. If a message from elsewhere
-carries a 64-byte extended key (key plus chain code), a bad signature
-throws instead.
+- ``CIP8Error/decodingError(_:)`` — the signature isn't hex, isn't a single
+  CBOR item, isn't a four-element COSE_Sign1 array, or has a protected header
+  that isn't a map, an unprotected header that isn't a map, or a detached
+  (`null`) payload.
+- ``CIP8Error/invalidSignature(_:)`` — the algorithm isn't EdDSA (-8), or the
+  signature isn't a byte string.
+- ``CIP8Error/invalidAddress(_:)`` — there is no `address` header, or it isn't
+  a non-empty byte string.
+- ``CIP8Error/invalidKey(_:)`` — there is no attached COSE_Key and no `kid`,
+  the `kid` isn't 32 or 64 bytes, or the attached COSE_Key isn't an OKP
+  Ed25519 key with a 32-byte `x`.
+
+Address bytes that are present but don't decode throw the address decoding
+error from `SwiftCardanoCore`, so catch `Error` rather than only ``CIP8Error``.
+
+A signature that doesn't match the key, or an address that doesn't belong to
+the signing key, surfaces as ``VerificationResult/verified`` = `false`, not as
+a throw. Messages signed by this package carry a 32-byte key. A message from
+elsewhere may carry a 64-byte extended key (key plus chain code) in `kid`;
+the first 32 bytes are the public key for both the signature and the address
+check.
 
 ## See Also
 

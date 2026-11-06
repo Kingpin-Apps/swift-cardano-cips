@@ -105,10 +105,14 @@ Notes:
 - `attachCoseKey: true` ships the public COSE_Key alongside the signature
   (CIP-30 `signData` shape). `attachCoseKey: false` embeds the verification
   key in the protected header (kid).
-- `verify` returns `verified == false` when the signature doesn't match a
-  32-byte key or the address doesn't belong to the key. If a message from
-  elsewhere carries a 64-byte extended key, a bad signature throws instead.
-  Decoding errors are thrown as they are, not only as `CIP8Error`.
+- `verify` returns `verified == false` when the signature doesn't match the
+  key or the address doesn't belong to the key. That holds for a 32-byte key
+  and for a 64-byte extended key (key plus chain code) in the `kid` header,
+  which is checked against its first 32 bytes.
+- `verify` treats its input as untrusted: a malformed message (bad hex or
+  CBOR, no `address` header, an algorithm other than EdDSA, a detached
+  payload, a missing or malformed key) throws a `CIP8Error` and never traps.
+  Address bytes that don't decode throw the address decoding error.
 
 ## CIP-21 — hardware wallet transactions
 
