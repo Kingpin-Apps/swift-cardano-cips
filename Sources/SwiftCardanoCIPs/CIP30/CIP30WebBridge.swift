@@ -344,7 +344,7 @@ public final class CIP30WebBridge: NSObject {
             return try await provider.getExtensions().map { ["cip": $0.cip] }
         case "getUtxos":
             let amount = (params["amount"] as? String).flatMap { Data(hexString: $0) }
-            let paginate = decodePaginate(params["paginate"])
+            let paginate = try decodePaginate(params["paginate"])
             let utxos = try await provider.getUtxos(amount: amount, paginate: paginate)
             return utxos?.map { $0.toHex } as Any? ?? NSNull()
         case "getCollateral":
@@ -356,7 +356,7 @@ public final class CIP30WebBridge: NSObject {
         case "getBalance":
             return try await provider.getBalance().toHex
         case "getUsedAddresses":
-            let paginate = decodePaginate(params["paginate"])
+            let paginate = try decodePaginate(params["paginate"])
             return try await provider.getUsedAddresses(paginate: paginate).map { $0.toHex }
         case "getUnusedAddresses":
             return try await provider.getUnusedAddresses().map { $0.toHex }
@@ -387,11 +387,17 @@ public final class CIP30WebBridge: NSObject {
         }
     }
 
-    private func decodePaginate(_ raw: Any?) -> Paginate? {
+    /// The dApp's `paginate` argument. Absent (or `null`) means no pagination; anything
+    /// else must be `{page, limit}` with whole numbers in `UInt32` range. A negative or
+    /// oversized number used to trap in `UInt32.init`; it's now an invalid request.
+    private func decodePaginate(_ raw: Any?) throws -> Paginate? {
+        if raw == nil || raw is NSNull { return nil }
         guard let dict = raw as? [String: Any],
-              let page = (dict["page"] as? Int).map(UInt32.init),
-              let limit = (dict["limit"] as? Int).map(UInt32.init)
-        else { return nil }
+              let page = (dict["page"] as? Int).flatMap({ UInt32(exactly: $0) }),
+              let limit = (dict["limit"] as? Int).flatMap({ UInt32(exactly: $0) })
+        else {
+            throw APIError.invalidRequest("paginate must be {page, limit} with whole numbers from 0 to 2^32 - 1")
+        }
         return Paginate(page: page, limit: limit)
     }
 

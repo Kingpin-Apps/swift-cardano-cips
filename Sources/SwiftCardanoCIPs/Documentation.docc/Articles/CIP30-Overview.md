@@ -124,6 +124,11 @@ The error enums to know:
 - ``TxSendError`` — `submitTx` failures.
 - ``PaginateError`` — `getUtxos`/`getUsedAddresses` page out of range.
 
+A `paginate` argument that isn't `{page, limit}` with whole numbers from 0 to
+2^32 - 1 (a negative page, say) is rejected by the bridge with
+``APIError/invalidRequest(_:)``, and the reference provider rejects a `limit`
+of 0 the same way.
+
 ## See Also
 
 - <doc:CIP30-Security>

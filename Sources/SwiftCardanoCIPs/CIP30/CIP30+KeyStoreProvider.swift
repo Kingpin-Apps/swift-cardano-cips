@@ -180,13 +180,7 @@ public actor KeyStoreCIP30Provider: CIP30Provider {
         let cbor = try all.map { try $0.toCBORData() }
 
         if let p = paginate {
-            let start = Int(p.page) * Int(p.limit)
-            guard start < cbor.count else {
-                let pages = max(1, (cbor.count + Int(p.limit) - 1) / Int(p.limit))
-                throw PaginateError(maxSize: pages, info: "Page \(p.page) out of range")
-            }
-            let end = min(start + Int(p.limit), cbor.count)
-            return Array(cbor[start..<end])
+            return try Self.page(of: cbor, p, info: "Page \(p.page) out of range")
         }
         return cbor
     }
@@ -211,15 +205,28 @@ public actor KeyStoreCIP30Provider: CIP30Provider {
         }
 
         if let p = paginate {
-            let start = Int(p.page) * Int(p.limit)
-            guard start < used.count else {
-                let pages = max(1, (used.count + Int(p.limit) - 1) / Int(p.limit))
-                throw PaginateError(maxSize: pages)
-            }
-            let end = min(start + Int(p.limit), used.count)
-            return Array(used[start..<end])
+            return try Self.page(of: used, p)
         }
         return used
+    }
+
+    /// One page of `items`. The paginate values come from the dApp, so a zero `limit`
+    /// is an invalid request rather than a division by zero, and the offset is worked
+    /// out in `UInt64` so a large `page` can't overflow `Int` (32 bits on watchOS).
+    private static func page<T>(of items: [T], _ p: Paginate, info: String = "") throws -> [T] {
+        guard p.limit > 0 else {
+            throw APIError.invalidRequest("Paginate limit must be at least 1")
+        }
+        let limit = UInt64(p.limit)
+        let count = UInt64(items.count)
+        // At most (2^32 - 1)^2, which fits in UInt64.
+        let start = UInt64(p.page) * limit
+        guard start < count else {
+            let pages = max(1, (count + limit - 1) / limit)
+            throw PaginateError(maxSize: Int(pages), info: info)
+        }
+        let end = min(start + limit, count)
+        return Array(items[Int(start)..<Int(end)])
     }
 
     public func getUnusedAddresses() async throws -> [Data] {

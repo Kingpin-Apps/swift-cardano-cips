@@ -143,6 +143,34 @@ import Testing
         #expect(cbors.isEmpty)
     }
 
+    // MARK: - Pagination from untrusted input
+
+    /// A zero limit used to divide by zero once the page was out of range.
+    @Test func paginateWithZeroLimitIsInvalidRequest() async throws {
+        let provider = try KeyStoreCIP30Provider(
+            info: WalletInfo(name: "Test", icon: ""),
+            paymentKey: .signingKey(paymentSK),
+            stakeKey: .signingKey(stakeSK),
+            network: .preview,
+            dataSource: AlwaysOKDataSource()
+        )
+        await #expect(throws: APIError.invalidRequest("Paginate limit must be at least 1")) {
+            try await provider.getUsedAddresses(paginate: Paginate(page: 0, limit: 0))
+        }
+        await #expect(throws: APIError.invalidRequest("Paginate limit must be at least 1")) {
+            try await makeProvider().getUsedAddresses(paginate: Paginate(page: 0, limit: 0))
+        }
+    }
+
+    @Test func paginateWithHugePageIsOutOfRange() async throws {
+        let provider = try makeProvider()
+        await #expect(throws: PaginateError(maxSize: 1)) {
+            try await provider.getUsedAddresses(paginate: Paginate(page: .max, limit: .max))
+        }
+        let firstPage = try await provider.getUsedAddresses(paginate: Paginate(page: 0, limit: .max))
+        #expect(firstPage.count == 1)
+    }
+
     @Test func getBalanceWithoutDataSourceThrowsInternalError() async throws {
         let provider = try makeProvider()
         do {
@@ -733,6 +761,61 @@ private actor ConsentCounter {
         // B is still enabled.
         let netB = try await bridge.dispatch(method: "getNetworkId", params: [:], context: originB)
         #expect(netB as? Int == 0)
+    }
+
+    /// The bridge's `paginate` argument comes straight from page JavaScript. Negative or
+    /// out-of-range numbers used to trap in `UInt32.init`.
+    @MainActor
+    @Test func bridgeRejectsMalformedPaginate() async throws {
+        let info = WalletInfo(name: "Test", icon: "")
+        let payment = CIP30Tests().paymentSK
+        let stake = CIP30Tests().stakeSK
+        let initial = KeyStoreCIP30Initial(
+            info: info,
+            consent: { _, _ in true },
+            makeProvider: { _, _ in
+                try KeyStoreCIP30Provider(
+                    info: info,
+                    paymentKey: .signingKey(payment),
+                    stakeKey: .signingKey(stake),
+                    network: .preview
+                )
+            }
+        )
+        let bridge = try CIP30WebBridge(initial: initial, walletKey: "swiftWallet")
+        let origin = CIP30RequestContext(origin: "https://app.example", isMainFrame: true)
+        _ = try await bridge.dispatch(method: "enable", params: [:], context: origin)
+
+        let malformed: [Any] = [
+            ["page": -1, "limit": 10],
+            ["page": 0, "limit": -5],
+            ["page": 0, "limit": 5_000_000_000],
+            ["page": 1.5, "limit": 10],
+            ["page": 0],
+            "page 0",
+        ]
+        for paginate in malformed {
+            for method in ["getUsedAddresses", "getUtxos"] {
+                do {
+                    _ = try await bridge.dispatch(method: method, params: ["paginate": paginate], context: origin)
+                    Issue.record("Expected APIError.invalidRequest for \(method) \(paginate)")
+                } catch let err as APIError {
+                    #expect(err.code == -1)
+                }
+            }
+        }
+
+        // Absent or null paginate still means "everything".
+        let all = try await bridge.dispatch(method: "getUsedAddresses", params: [:], context: origin)
+        #expect((all as? [String])?.count == 1)
+        let nullPaginate = try await bridge.dispatch(
+            method: "getUsedAddresses", params: ["paginate": NSNull()], context: origin
+        )
+        #expect((nullPaginate as? [String])?.count == 1)
+        let paged = try await bridge.dispatch(
+            method: "getUsedAddresses", params: ["paginate": ["page": 0, "limit": 1]], context: origin
+        )
+        #expect((paged as? [String])?.count == 1)
     }
 
     @MainActor

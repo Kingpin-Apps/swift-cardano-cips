@@ -164,7 +164,8 @@ extension PaginateError: Codable {
 // MARK: - Data structures
 
 /// Pagination request for `getUtxos` and `getUsedAddresses`. Page index is zero-based;
-/// `limit` is the page size hint (CIP-30 leaves the actual size up to the wallet).
+/// `limit` is the page size hint (CIP-30 leaves the actual size up to the wallet). The
+/// reference provider throws ``APIError/invalidRequest(_:)`` for a `limit` of 0.
 public struct Paginate: Equatable, Sendable, Codable {
     public let page: UInt32
     public let limit: UInt32
