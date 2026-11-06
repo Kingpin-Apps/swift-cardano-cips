@@ -1,3 +1,13 @@
+## 0.4.2 (2026-11-06)
+
+### Fix
+
+- **cip119**: escape DRep metadata JSON and write doNotList
+- **cip100**: hash only the body and its context for author witnesses
+- **cip30**: reject malformed pagination instead of trapping
+- **cip8**: throw on malformed signed messages instead of trapping
+- **cip8**: write the unprotected header as a map, not null
+
 ## 0.4.1 (2026-10-30)
 
 ### Fix
