@@ -34,22 +34,26 @@ public struct ImageObject: JSONSerializable {
         self.sha256 = sha256
     }
 
+    /// The image as a JSON object, laid out to sit inside ``DRepMetadata/toJSON()``'s
+    /// `body`. Strings are escaped; an unset `sha256` is left out.
     public func toJSON() throws -> String? {
-        let jsonString = """
-        {
-                    "@type": "\(type)",
-                    "contentUrl": "\(contentUrl)",
-                    "sha256": "\(sha256 ?? "")"
-                }
-        """
-        return jsonString
+        var fields = [
+            "\"@type\": \(try jsonString(type))",
+            "\"contentUrl\": \(try jsonString(contentUrl))",
+        ]
+        if let sha256 {
+            fields.append("\"sha256\": \(try jsonString(sha256))")
+        }
+        return "{\n" + fields.map { "            " + $0 }.joined(separator: ",\n") + "\n        }"
     }
 
     public func toDict() throws -> Primitive {
         var dict: OrderedDictionary<Primitive, Primitive> = [:]
         dict[.string("@type")] = .string(type)
         dict[.string("contentUrl")] = .string(contentUrl)
-        dict[.string("sha256")] = .string(sha256 ?? "")
+        if let sha256 {
+            dict[.string("sha256")] = .string(sha256)
+        }
         return .orderedDict(dict)
     }
 
@@ -86,15 +90,15 @@ public struct Reference: JSONSerializable {
         self.uri = uri
     }
 
+    /// The reference as a JSON object, laid out to sit inside ``DRepMetadata/toJSON()``'s
+    /// `references` array. Strings are escaped.
     public func toJSON() throws -> String? {
-        let jsonString = """
-        {
-                    "@type": "\(type)",
-                    "label": "\(label)",
-                    "uri": "\(uri)"
-                  }
-        """
-        return jsonString
+        let fields = [
+            "\"@type\": \(try jsonString(type))",
+            "\"label\": \(try jsonString(label))",
+            "\"uri\": \(try jsonString(uri))",
+        ]
+        return "{\n" + fields.map { "            " + $0 }.joined(separator: ",\n") + "\n          }"
     }
 
     public func toDict() throws -> Primitive {
@@ -159,6 +163,10 @@ public struct DRepMetadata: JSONSerializable {
         self.doNotList = doNotList
     }
 
+    /// The CIP-119 JSON-LD document: the CIP-119 `@context`, `hashAlgorithm` and the
+    /// `body`. Strings are JSON-escaped; unset optional fields are left out, and
+    /// `doNotList` is written only when `true`. A fully filled-in value keeps the
+    /// layout of CIP-119's `examples/drep.jsonld`, so ``hash()`` matches that file.
     public func toJSON() throws -> String? {
         let jsonString = """
         {
@@ -195,15 +203,7 @@ public struct DRepMetadata: JSONSerializable {
             },
             "hashAlgorithm": "blake2b-256",
             "body": {
-                "paymentAddress": "\(paymentAddress ?? "")",
-                "givenName": "\(givenName)",
-                "image": \(try image?.toJSON() ?? "{}"),
-                "objectives": "\(objectives ?? "")",
-                "motivations": "\(motivations ?? "")",
-                "qualifications": "\(qualifications ?? "")",
-                "references": [
-                  \(try references?.compactMap { try $0.toJSON() }.joined(separator: ",\n          ") ?? "")
-                ]
+        \(try bodyFields().joined(separator: ",\n"))
             }
         }
 
@@ -211,22 +211,69 @@ public struct DRepMetadata: JSONSerializable {
         return jsonString
     }
 
+    /// The `body` members of ``toJSON()``, each already indented, in CIP-119 order.
+    ///
+    /// Unset optional fields are left out rather than written as `""`, `{}` or `[]`,
+    /// so the document only states what the DRep gave. `doNotList` is written only
+    /// when `true`: CIP-119 says a missing `doNotList` means `false`, and leaving it
+    /// out keeps the bytes (and so the anchor hash) of existing documents unchanged.
+    private func bodyFields() throws -> [String] {
+        let indent = "        "
+        var fields: [String] = []
+        if let paymentAddress {
+            fields.append("\"paymentAddress\": \(try jsonString(paymentAddress))")
+        }
+        fields.append("\"givenName\": \(try jsonString(givenName))")
+        if let image, let imageJSON = try image.toJSON() {
+            fields.append("\"image\": \(imageJSON)")
+        }
+        if let objectives {
+            fields.append("\"objectives\": \(try jsonString(objectives))")
+        }
+        if let motivations {
+            fields.append("\"motivations\": \(try jsonString(motivations))")
+        }
+        if let qualifications {
+            fields.append("\"qualifications\": \(try jsonString(qualifications))")
+        }
+        if let references {
+            if references.isEmpty {
+                fields.append("\"references\": []")
+            } else {
+                let items = try references.compactMap { try $0.toJSON() }
+                fields.append("\"references\": [\n          " + items.joined(separator: ",\n          ") + "\n        ]")
+            }
+        }
+        if doNotList {
+            fields.append("\"doNotList\": true")
+        }
+        return fields.map { indent + $0 }
+    }
+
     public func toDict() throws -> Primitive {
         var body: OrderedDictionary<Primitive, Primitive> = [:]
-        body[.string("paymentAddress")] = .string(paymentAddress ?? "")
+        if let paymentAddress {
+            body[.string("paymentAddress")] = .string(paymentAddress)
+        }
         body[.string("givenName")] = .string(givenName)
         if let image = image {
             body[.string("image")] = try image.toDict()
         }
-        body[.string("objectives")] = .string(objectives ?? "")
-        body[.string("motivations")] = .string(motivations ?? "")
-        body[.string("qualifications")] = .string(qualifications ?? "")
+        if let objectives {
+            body[.string("objectives")] = .string(objectives)
+        }
+        if let motivations {
+            body[.string("motivations")] = .string(motivations)
+        }
+        if let qualifications {
+            body[.string("qualifications")] = .string(qualifications)
+        }
         if let references = references {
             body[.string("references")] = .list(try references.map { try $0.toDict() })
-        } else {
-            body[.string("references")] = .list([])
         }
-        body[.string("doNotList")] = .bool(doNotList)
+        if doNotList {
+            body[.string("doNotList")] = .bool(true)
+        }
 
         var top: OrderedDictionary<Primitive, Primitive> = [:]
         top[.string("body")] = .orderedDict(body)
@@ -269,8 +316,15 @@ public struct DRepMetadata: JSONSerializable {
         }
 
         var doNotList = false
-        if let dnlVal = body[.string("doNotList")], case let .bool(b) = dnlVal {
+        // CIP-119's README makes doNotList a boolean; its JSON schema has the strings
+        // "true" / "false". Read both.
+        switch body[.string("doNotList")] {
+        case .bool(let b)?:
             doNotList = b
+        case .string(let s)?:
+            doNotList = s == "true"
+        default:
+            break
         }
 
         return DRepMetadata(
@@ -286,8 +340,10 @@ public struct DRepMetadata: JSONSerializable {
     }
 
     public func hash() throws -> String {
-        let json = try toJSON()!
-        let jsonData = json.data(using: .utf8)!
+        guard let json = try toJSON() else {
+            throw CIP119Error.deserialize("DRepMetadata: could not build the JSON document")
+        }
+        let jsonData = Data(json.utf8)
 
         let hash = try SwiftNaCl.Hash().blake2b(
             data: jsonData,
@@ -300,6 +356,16 @@ public struct DRepMetadata: JSONSerializable {
 }
 
 // MARK: - Internal helpers
+
+/// `value` as a quoted, escaped JSON string. Quotes, backslashes and control
+/// characters are escaped; `/` and non-ASCII text are written as they are, so URLs
+/// and names read the same as in hand-written CIP-119 documents.
+private func jsonString(_ value: String) throws -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.withoutEscapingSlashes]
+    let data = try encoder.encode(value)
+    return String(decoding: data, as: UTF8.self)
+}
 
 private extension JSONSerializable {
     static func unwrapDict(_ primitive: Primitive, typeName: String) throws

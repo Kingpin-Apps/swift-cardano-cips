@@ -401,9 +401,14 @@ publish, so compute it over `signed`. `dRep.hash()` hashes the unsigned
 `toJSON()` string (not a canonical form), so it only matches the anchor if
 you publish that unsigned document as it is.
 
-`toJSON()` writes every body field: unset strings become `""`, an unset
-image becomes `{}`, and unset references become `[]`. It does not write
-`doNotList`.
+`toJSON()` escapes every string, so any text (quotes, backslashes,
+newlines, emoji) gives valid JSON. It writes only the body fields you set:
+an unset `paymentAddress`, `image`, `objectives`, `motivations`,
+`qualifications`, `references` or image `sha256` is left out, and an empty
+`references` array is written as `[]`. `doNotList: true` is written as the
+boolean `"doNotList": true`; `false` is left out, since CIP-119 reads a
+missing `doNotList` as `false`. A fully filled-in document keeps the layout
+of CIP-119's `examples/drep.jsonld` byte for byte, so its hash matches.
 
 ## CIP-129 — governance credential bech32
 

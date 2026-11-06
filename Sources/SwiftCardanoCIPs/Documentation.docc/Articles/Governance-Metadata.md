@@ -112,9 +112,14 @@ API that writes them into a document for you.
 - Public keys and signatures in the JSON are **hex strings**, not raw
   bytes.
 - DRep metadata's `givenName` is required. Everything else is optional,
-  but ``DRepMetadata/toJSON()`` still writes every body field: unset
-  strings become `""`, an unset image becomes `{}`, and unset references
-  become `[]`. `toJSON()` does not write `doNotList`.
+  and ``DRepMetadata/toJSON()`` leaves out what you didn't set (an empty
+  `references` array is still written as `[]`). Every string is
+  JSON-escaped. `doNotList` is written as `"doNotList": true` when set;
+  `false` is left out, since CIP-119 reads a missing `doNotList` as
+  `false`. When decoding, the boolean and the schema's `"true"` / `"false"`
+  strings are both accepted.
+- A fully filled-in ``DRepMetadata`` gives the same bytes as CIP-119's
+  `examples/drep.jsonld`, so ``DRepMetadata/hash()`` matches that file.
 - ``DRepMetadata/hash()`` is the Blake2b-256 of the `toJSON()` string
   bytes. It is not a canonical (JSON-LD) hash.
 
