@@ -17,12 +17,15 @@ The CIP-119 implementation provides a typed schema for DRep metadata.
 
 ### What gets signed
 
-Signatures must not cover the `authors` field — otherwise each new author
-would invalidate every prior signature.
-``CIP100/signMetadata(document:signingKey:authorName:)`` removes `authors`
-from the document, canonicalizes the rest with RDFC-1.0 (URDNA2015),
-hashes it with Blake2b-256, signs the hash, and appends the new author
-entry to the document it returns.
+CIP-100 witnesses sign the document's `body`, so adding an author never
+invalidates earlier signatures.
+``CIP100/signMetadata(document:signingKey:authorName:)`` keeps only
+`@context` and `body` (dropping `authors`, `hashAlgorithm` and any other
+top-level field), canonicalizes that with RDFC-1.0 (URDNA2015), hashes it
+with Blake2b-256, signs the hash, and appends the new author entry to the
+document it returns. This is the procedure in CIP-100's `test-vector.md`,
+and it reproduces that example's published hash and signature. A document
+with no `body` throws ``CIP100Error/missingField(_:)``.
 
 ``CIP100/verifyMetadata(_:)`` does the same canonicalization, hashes the
 document once, and checks every author witness, in document order,

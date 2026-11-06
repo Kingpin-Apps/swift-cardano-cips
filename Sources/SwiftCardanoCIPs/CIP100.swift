@@ -51,9 +51,10 @@ public enum CIP100Error: Error, Equatable {
 ///
 /// ### Signing algorithm
 ///
-/// 1. Strip the document's `authors` field (signing happens before
-///    witnesses are attached, so previously-attached signatures don't
-///    contribute to the canonical form).
+/// 1. Keep only the document's `@context` and `body` (CIP-100 witnesses
+///    sign the `body`; test-vector.md removes every other top-level field,
+///    so `authors` and `hashAlgorithm` don't contribute). A document with
+///    no `body` throws ``CIP100Error/missingField(_:)``.
 /// 2. Canonicalize the resulting document with RDFC-1.0 / URDNA2015 via
 ///    `JSONLD.canonize(_:options:)`.
 /// 3. Take the UTF-8 bytes of the canonical N-Quads (already terminated
@@ -258,8 +259,10 @@ public enum CIP100 {
     // MARK: - Canonical body hash (exposed)
 
     /// Compute the Blake2b-256 of the canonical N-Quads form of the
-    /// document with `authors` stripped — i.e. the payload every CIP-100
-    /// author witness signs.
+    /// document's `@context` and `body` (every other top-level field
+    /// dropped) — i.e. the payload every CIP-100 author witness signs.
+    ///
+    /// - Throws: ``CIP100Error/missingField(_:)`` when there is no `body`.
     ///
     /// Exposed so callers can pre-compute the hash (e.g. for an external
     /// HSM-backed signer) without going through ``signMetadata(document:signingKey:authorName:)``.
@@ -269,9 +272,17 @@ public enum CIP100 {
     }
 
     private static func canonicalBodyHash(of rootObject: [String: Any]) async throws -> Data {
-        // Strip authors before canonicalizing.
-        var stripped = rootObject
-        stripped.removeValue(forKey: "authors")
+        // Witnesses sign the `body` only (CIP-100 "Hashing and Signatures";
+        // test-vector.md step 1: "remove any top-level fields that are not
+        // `@context` or `body`"). Other top-level fields such as
+        // `hashAlgorithm` must not reach the canonical form.
+        guard let body = rootObject["body"] else {
+            throw CIP100Error.missingField("body")
+        }
+        var stripped: [String: Any] = ["body": body]
+        if let context = rootObject["@context"] {
+            stripped["@context"] = context
+        }
 
         // Bridge into the JSONLD.JSON type and canonicalize.
         let jsonValue = JSONLD.JSON.fromFoundation(stripped)

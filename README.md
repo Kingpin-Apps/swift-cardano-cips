@@ -353,8 +353,12 @@ writes it for you.
 Notes:
 
 - Async because JSON-LD canonicalization is.
-- Signing and verifying remove the `authors` field before canonicalizing,
-  so prior signatures don't change the hash.
+- Signing and verifying hash the `body` only: they keep `@context` and
+  `body`, drop every other top-level field (`authors`, `hashAlgorithm`, …),
+  canonicalize, then hash, as CIP-100's test vector does. So prior
+  signatures don't change the hash, and a document with no `body` throws
+  `CIP100Error.missingField("body")`. The official CIP-100 example's author
+  witness verifies.
 - `verifyMetadata` checks every author in document order; read
   `result.authorResults[i].valid` for each one.
 - `canonicalBodyHash` is the hash the witnesses sign. It is not the
