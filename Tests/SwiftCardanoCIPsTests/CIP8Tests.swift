@@ -1,4 +1,5 @@
 import Foundation
+import CBORCodable
 import SwiftCardanoCore
 import Testing
 
@@ -197,5 +198,18 @@ import Testing
         let verification = try CIP8.verify(signedMessage: signedMessage)
         #expect(verification.verified == true)
         #expect(verification.message == "Pycardano is cool.")
+    }
+
+    /// `sign` used to write the unprotected header as CBOR `null` (`CBOR.fromAny`
+    /// can't convert swift-cose's header dictionary). It must be the map `{"hashed": false}`.
+    @Test(arguments: [false, true])
+    func signWritesUnprotectedHeaderAsMap(_ attachCoseKey: Bool) throws {
+        let signed = try CIP8.sign(message: "hello", signingKey: .signingKey(sk), attachCoseKey: attachCoseKey)
+        var reader = CBORReader(Data(hex: signed.signature))
+        guard case .array(let items) = try reader.decodeTopLevel(), items.count == 4 else {
+            Issue.record("Not a COSE_Sign1 array")
+            return
+        }
+        #expect(items[1] == .map([.textString("hashed"): .boolean(false)]))
     }
 }

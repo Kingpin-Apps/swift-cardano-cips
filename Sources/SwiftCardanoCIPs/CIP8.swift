@@ -206,7 +206,10 @@ public struct CIP8 {
 
         let _message: [CBOR] = [
             .byteString(sign1Message.phdrEncoded),
-            .fromAny(sign1Message.uhdrEncoded),
+            // Written out by hand: `CBOR.fromAny` can't convert swift-cose's
+            // `OrderedDictionary<CoseHeaderAttribute, Any>` and silently gives
+            // `null`, which isn't a valid COSE unprotected header.
+            .map([.textString("hashed"): .boolean(false)]),
             .byteString(sign1Message.payload!),
             .byteString(signed)
         ]
