@@ -25,7 +25,7 @@ public enum CIP100Error: Error, Equatable {
     /// safe prefix (≤ 80 chars + ellipsis) — never the full input.
     /// Witness fields are attacker-controlled in CIP-100 documents; a
     /// multi-megabyte garbage string would otherwise amplify into log /
-    /// error sinks. See ``CIP100/truncatedForError(_:)``.
+    /// error sinks.
     case malformedHex(String)
     /// JSON-LD canonicalization failed.
     case canonicalizationFailed(String)
@@ -62,7 +62,7 @@ public enum CIP100Error: Error, Equatable {
 /// 5. Sign the 32-byte hash with the author's Ed25519 signing key.
 ///
 /// Verification re-canonicalizes the same way and checks each author's
-/// witness signature in parallel.
+/// witness signature, in document order, against that one hash.
 public enum CIP100 {
 
     /// The single witness algorithm CIP-100 defines.

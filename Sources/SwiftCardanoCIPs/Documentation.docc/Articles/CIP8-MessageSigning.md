@@ -92,10 +92,17 @@ to be `true`:
 
 ## Errors
 
-``CIP8Error`` covers the cases where the inputs are structurally invalid —
-unparseable hex, an unsupported key shape, an address that can't be
-decoded. Real signature mismatches surface as
-``VerificationResult/verified`` = `false`, not as a throw.
+``CIP8Error`` covers some of the cases where the inputs are structurally
+invalid, such as a missing verification key. Errors from the underlying
+COSE, CBOR and address decoding are thrown as they are, so catch `Error`
+rather than only ``CIP8Error``.
+
+A signature that doesn't match a 32-byte verification key, or an address
+that doesn't belong to the signing key, surfaces as
+``VerificationResult/verified`` = `false`, not as a throw. Messages signed
+by this package always carry a 32-byte key. If a message from elsewhere
+carries a 64-byte extended key (key plus chain code), a bad signature
+throws instead.
 
 ## See Also
 

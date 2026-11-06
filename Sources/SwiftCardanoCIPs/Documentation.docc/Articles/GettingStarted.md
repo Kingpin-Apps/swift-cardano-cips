@@ -7,7 +7,7 @@ Install `SwiftCardanoCIPs`, import it, and pick the CIP you need.
 ### Swift Package Manager
 
 ```swift
-.package(url: "https://github.com/Kingpin-Apps/swift-cardano-cips.git", from: "0.3.3")
+.package(url: "https://github.com/Kingpin-Apps/swift-cardano-cips.git", from: "0.4.1")
 ```
 
 then in your target:
@@ -26,6 +26,10 @@ then in your target:
 `File` → `Add Package Dependencies…` → enter
 `https://github.com/Kingpin-Apps/swift-cardano-cips.git` → add the
 `SwiftCardanoCIPs` library to your target.
+
+If you only need CIP-21 (hardware-wallet transaction checks), you can
+depend on the smaller `SwiftCardanoCIP21` product instead. It has no
+dependencies. `SwiftCardanoCIPs` re-exports it, so you don't need both.
 
 ### Import
 

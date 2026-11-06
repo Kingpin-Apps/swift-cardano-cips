@@ -13,7 +13,7 @@ public enum CIP88Error: Error, Equatable {
     case invalidPoolVerificationKey(Int)
     /// The supplied nonce exceeds `Int.max` and cannot be encoded
     /// through the underlying
-    /// ``SwiftCardanoCore/TransactionMetadatum`` `.int` case. See the
+    /// `TransactionMetadatum` `.int` case (from `SwiftCardanoCore`). See the
     /// matching `CIP36Error.nonceOutOfRange(_:)` for the same trap.
     case nonceOutOfRange(UInt64)
     /// CBOR encoding failed.

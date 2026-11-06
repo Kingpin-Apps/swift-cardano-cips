@@ -9,9 +9,10 @@
 
 Swift implementations of Cardano Improvement Proposals, built on
 [swift-cardano-core](https://github.com/Kingpin-Apps/swift-cardano-core).
-Use it to sign messages, register voting/Calidus keys, encode native-asset
-fingerprints, sign and verify governance metadata, derive CIP-129 governance
-IDs, and stand up a CIP-30 wallet for a `WKWebView` dApp surface.
+Use it to sign messages, check transactions for hardware wallets, register
+voting/Calidus keys, encode native-asset fingerprints, derive minting-policy
+keys and policy IDs, sign and verify governance metadata, derive CIP-129
+governance IDs, and stand up a CIP-30 wallet for a `WKWebView` dApp surface.
 
 | CIP   | What you get                                                                 | Type   |
 | ----- | ---------------------------------------------------------------------------- | ------ |
@@ -24,6 +25,7 @@ IDs, and stand up a CIP-30 wallet for a `WKWebView` dApp surface.
 | [CIP-100](#cip-100--governance-metadata-signing) | Sign / verify governance JSON-LD metadata documents            | sign   |
 | [CIP-119](#cip-119--drep-metadata) | DRep metadata schema (built on CIP-100)                                     | schema |
 | [CIP-129](#cip-129--governance-credential-bech32) | `drep1…` / `cc_cold1…` / `cc_hot1…` / `calidus1…` IDs            | utility |
+| [CIP-1855](#cip-1855--minting-policy-keys) | Minting-policy key derivation path, native script and policy ID | utility |
 
 ## Installation
 
@@ -32,7 +34,7 @@ IDs, and stand up a CIP-30 wallet for a `WKWebView` dApp surface.
 Add the package as a dependency in `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/Kingpin-Apps/swift-cardano-cips.git", from: "0.3.3")
+.package(url: "https://github.com/Kingpin-Apps/swift-cardano-cips.git", from: "0.4.1")
 ```
 
 then in your target:
@@ -48,6 +50,9 @@ then in your target:
 `File` → `Add Package Dependencies…` → enter
 `https://github.com/Kingpin-Apps/swift-cardano-cips.git` → add the
 `SwiftCardanoCIPs` library to your target.
+
+If you only need CIP-21, depend on the `SwiftCardanoCIP21` product
+instead. `SwiftCardanoCIPs` re-exports it, so you don't need both.
 
 ### Import
 
@@ -100,6 +105,10 @@ Notes:
 - `attachCoseKey: true` ships the public COSE_Key alongside the signature
   (CIP-30 `signData` shape). `attachCoseKey: false` embeds the verification
   key in the protected header (kid).
+- `verify` returns `verified == false` when the signature doesn't match a
+  32-byte key or the address doesn't belong to the key. If a message from
+  elsewhere carries a 64-byte extended key, a bad signature throws instead.
+  Decoding errors are thrown as they are, not only as `CIP8Error`.
 
 ## CIP-21 — hardware wallet transactions
 
@@ -134,16 +143,17 @@ let body = try CIP21.compatibleBody(bodyCBOR)
 fingerprint exchanges and explorers display for native tokens.
 
 ```swift
-let fingerprint = CIP14.encodeAsset(
+let fingerprint = try CIP14.encodeAsset(
     policyId: .hexString("7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373"),
     assetName: .hexString("504154415445")
 )
-// "asset13n9uvz077dxncpe7e7cesxldwfeexye2qrhqvk"
+// "asset13n25uv0yaf5kus35fm2k86cqy60z58d9xmde92"
 ```
 
-Inputs accept multiple forms — `.policyId(PolicyID)`, `.data(Data)`,
-`.hexString(String)` — so you don't have to pre-convert. Returns `nil` only
-if hashing / bech32 fails.
+Inputs accept several forms, so you don't have to pre-convert: the policy
+as `.policyId(PolicyID)`, `.data(Data)` or `.hexString(String)`, and the
+asset name as `.assetName(AssetName)`, `.data(Data)` or
+`.hexString(String)`. Returns `nil` if bech32 encoding fails.
 
 ## CIP-30 — dApp connector for WKWebView
 
@@ -251,8 +261,15 @@ const witnessSet = await api.signTx(txCborHex, false /* partialSign */);
 - Choosing an `originPolicy` that matches your embedding model. Default
   `.mainFrameOnly` is the safe choice for "load arbitrary dApps in a
   webview."
-- Implementing `CIP30DataSource` to surface UTxOs and submit transactions
-  for `KeyStoreCIP30Provider`. The library doesn't ship chain access.
+- Implementing `CIP30DataSource` (`utxos(for: Address)` and `submit(_:)`)
+  to surface UTxOs and submit transactions for `KeyStoreCIP30Provider`.
+  The library doesn't ship chain access. Without a data source, `getUtxos`
+  and `getBalance` throw `APIError.internalError` and `submitTx` throws
+  `TxSendError.failure`.
+
+`KeyStoreCIP30Provider` is a single-address reference wallet. Its
+`getUtxos` ignores the `amount` argument, and `getCollateral` returns `nil`.
+Implement your own `CIP30Provider` if you need more.
 
 ## CIP-36 — Catalyst voting registration
 
@@ -263,7 +280,7 @@ your transaction, and the on-chain witness establishes voting power.
 ```swift
 let aux = try CIP36.makeRegistration(
     delegations: [
-        Delegation(votingKey: catalystVKey32, weight: 1)
+        CIP36.Delegation(votingKey: catalystVKey32, weight: 1)
     ],
     stakeSigningKey: .signingKey(stakeSK),
     rewardsAddress: rewardsAddr,
@@ -296,8 +313,8 @@ let aux = try CIP88.makeCalidusRegistration(
 )
 ```
 
-Behavior matches `cardano-signer.js --cip88`: the signed payload is the
-hex-encoded CBOR, not the raw bytes.
+Behavior matches `cardano-signer.js --cip88`: the signature covers the
+Blake2b-256 of the hex-encoded payload CBOR, not of the raw CBOR bytes.
 
 ## CIP-100 — governance metadata signing
 
@@ -322,14 +339,23 @@ For HSM-style workflows, derive the hash to sign externally:
 ```swift
 let hash = try await CIP100.canonicalBodyHash(of: jsonBytes)
 let signature = try myHSM.signEd25519(hash)
-// …then append author entry manually.
 ```
+
+Then add the author entry to the document's `authors` array yourself, in
+the shape `signMetadata` writes: `{"name": …, "witness": {"witnessAlgorithm":
+"ed25519", "publicKey": <hex>, "signature": <hex>}}`. There is no API that
+writes it for you.
 
 Notes:
 
 - Async because JSON-LD canonicalization is.
-- Signing strips any existing `authors` field before canonicalizing, so
-  prior signatures don't pollute the hash.
+- Signing and verifying remove the `authors` field before canonicalizing,
+  so prior signatures don't change the hash.
+- `verifyMetadata` checks every author in document order; read
+  `result.authorResults[i].valid` for each one.
+- `canonicalBodyHash` is the hash the witnesses sign. It is not the
+  on-chain anchor hash, which covers the raw bytes of the published
+  document.
 - Public keys and signatures are **hex strings** in the JSON, not raw
   bytes.
 
@@ -353,16 +379,23 @@ let dRep = DRepMetadata(
     doNotList: false
 )
 
-guard let json = dRep.toJSON() else { … }
+guard let json = try dRep.toJSON() else { … }
 let signed = try await CIP100.signMetadata(
     document: Data(json.utf8),
     signingKey: .signingKey(dRepSK),
     authorName: "Alice"
 )
 
-// blake2b-256 of canonical JSON; what you put in the on-chain anchor.
-let anchorHash = try dRep.hash()
 ```
+
+The on-chain anchor hash is the Blake2b-256 of exactly the bytes you
+publish, so compute it over `signed`. `dRep.hash()` hashes the unsigned
+`toJSON()` string (not a canonical form), so it only matches the anchor if
+you publish that unsigned document as it is.
+
+`toJSON()` writes every body field: unset strings become `""`, an unset
+image becomes `{}`, and unset references become `[]`. It does not write
+`doNotList`.
 
 ## CIP-129 — governance credential bech32
 
@@ -371,8 +404,8 @@ human-readable identifiers for DRep, constitutional-committee, and Calidus
 credentials.
 
 ```swift
-let drepId = CIP129.encode(
-    keyHash: blake2b224(vkeyBytes),
+let drepId = try CIP129.encode(
+    keyHash: drepKeyHash,  // 28-byte Blake2b-224 hash of the DRep verification key
     as: .drep,
     isScript: false
 )
@@ -384,13 +417,30 @@ let (prefix, hash, isScript) = try CIP129.decode("drep1…")
 Prefixes: `.drep`, `.ccCold`, `.ccHot`, `.calidus`. Key hash is always 28
 bytes. `calidus` has no script form.
 
+## CIP-1855 — minting-policy keys
+
+[`CIP-1855`](https://cips.cardano.org/cip/CIP-1855) defines the HD
+derivation path for minting-policy keys, `m/1855'/1815'/policy_ix'`.
+
+```swift
+let path = try CIP1855.policyKeyPath(policyIndex: 0)  // "m/1855'/1815'/0'"
+
+let script = CIP1855.mintingPolicyScript(keyHash: policyKeyHash)
+let policyID = try CIP1855.policyID(keyHash: policyKeyHash)
+```
+
+Without `invalidBefore` the script is a bare `sig` script. With
+`invalidBefore: slot` it becomes `all [ invalid_before(slot), sig ]`: the
+policy can only be used from that slot onwards (cardano-cli's `"after"`).
+It does not make the policy expire. Pass the same `invalidBefore` to
+`policyID` as to `mintingPolicyScript`, or the IDs won't match.
+
 ## Documentation
 
-Full API reference is in the DocC catalog. Build it locally:
-
-```bash
-swift package --disable-sandbox preview-documentation --target SwiftCardanoCIPs
-```
+Full API reference is in the DocC catalog, published on the
+[Swift Package Index](https://swiftpackageindex.com/Kingpin-Apps/swift-cardano-cips).
+To build it locally, open the package in Xcode and choose
+`Product` → `Build Documentation`.
 
 ## Contributing
 
@@ -400,9 +450,10 @@ Tests live alongside each module:
 swift test
 ```
 
-The CI workflow runs the suite on macOS plus Linux Swift 6.1+. CIP-30
-bridge tests stub `WKWebView` so they exercise both the JS shim contract
-and the per-origin gating without a UI dependency.
+The CI workflow runs the suite on macOS and on Linux (Swift 6.3). The
+CIP-30 unit tests drive the bridge with synthesized request contexts; on
+macOS, integration tests also load the JS shim into a real `WKWebView`
+to check the shim and the per-origin gating.
 
 ## License
 

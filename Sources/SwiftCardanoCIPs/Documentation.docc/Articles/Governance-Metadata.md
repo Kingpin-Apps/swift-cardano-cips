@@ -17,15 +17,16 @@ The CIP-119 implementation provides a typed schema for DRep metadata.
 
 ### What gets signed
 
-CIP-100 specifies that the canonical body excludes the `authors` field —
-otherwise each new author would invalidate every prior signature.
-``CIP100/signMetadata(document:signingKey:authorName:)`` strips the field,
-canonicalizes, signs the hash, and appends the new author entry to the
-document it returns.
+Signatures must not cover the `authors` field — otherwise each new author
+would invalidate every prior signature.
+``CIP100/signMetadata(document:signingKey:authorName:)`` removes `authors`
+from the document, canonicalizes the rest with RDFC-1.0 (URDNA2015),
+hashes it with Blake2b-256, signs the hash, and appends the new author
+entry to the document it returns.
 
 ``CIP100/verifyMetadata(_:)`` does the same canonicalization, hashes the
-body once, and verifies every author witness in parallel against the
-shared hash.
+document once, and checks every author witness, in document order,
+against that hash.
 
 ## DRep metadata example
 
@@ -46,17 +47,20 @@ let dRep = DRepMetadata(
     doNotList: false
 )
 
-guard let json = dRep.toJSON() else { fatalError("encode failed") }
+guard let json = try dRep.toJSON() else { fatalError("encode failed") }
 
 let signed = try await CIP100.signMetadata(
     document: Data(json.utf8),
     signingKey: .signingKey(dRepSK),
     authorName: "Alice"
 )
-
-// blake2b-256 of canonical JSON — what you put in the on-chain anchor.
-let anchorHash = try dRep.hash()
 ```
+
+`signed` holds the document bytes to publish. The on-chain anchor hash is
+the Blake2b-256 of exactly the bytes you publish, so compute it over
+`signed`. ``DRepMetadata/hash()`` hashes the unsigned `toJSON()` output,
+so it only matches the anchor if you publish that unsigned document as it
+is.
 
 ## Verifying
 
@@ -64,12 +68,13 @@ let anchorHash = try dRep.hash()
 let result = try await CIP100.verifyMetadata(signed)
 precondition(result.allValid)
 for author in result.authorResults {
-    print(author.name ?? "<anonymous>", author.verified)
+    print(author.name ?? "<anonymous>", author.valid)
 }
 ```
 
-``CIP100/VerificationResult/canonicalBodyHash`` is exposed so you can
-compare it against an on-chain anchor hash.
+``CIP100/VerificationResult/canonicalBodyHash`` is the hash every witness
+signs. It is not the on-chain anchor hash, which covers the raw document
+bytes.
 
 ## HSM / external signer flow
 
@@ -79,18 +84,36 @@ hash, sign it externally, and assemble the author entry yourself:
 ```swift
 let hash = try await CIP100.canonicalBodyHash(of: jsonBytes)
 let signature = try myHSM.signEd25519(hash)
-// Then construct an Author with a Witness manually and append.
 ```
+
+Then add the author entry to the document's `authors` array yourself, in
+the same shape `signMetadata` writes:
+
+```json
+{
+  "name": "Alice",
+  "witness": {
+    "witnessAlgorithm": "ed25519",
+    "publicKey": "<32-byte public key, hex>",
+    "signature": "<64-byte signature, hex>"
+  }
+}
+```
+
+``CIP100/Author`` and ``CIP100/Witness`` model this shape, but there is no
+API that writes them into a document for you.
 
 ## Gotchas
 
 - The flow is `async` — JSON-LD canonicalization is asynchronous.
 - Public keys and signatures in the JSON are **hex strings**, not raw
   bytes.
-- DRep metadata's `givenName` is required. Everything else is optional —
-  unset values omit their fields in the serialized JSON.
-- `hash()` digests the canonical JSON form, which is what the on-chain
-  governance anchor expects.
+- DRep metadata's `givenName` is required. Everything else is optional,
+  but ``DRepMetadata/toJSON()`` still writes every body field: unset
+  strings become `""`, an unset image becomes `{}`, and unset references
+  become `[]`. `toJSON()` does not write `doNotList`.
+- ``DRepMetadata/hash()`` is the Blake2b-256 of the `toJSON()` string
+  bytes. It is not a canonical (JSON-LD) hash.
 
 ## See Also
 

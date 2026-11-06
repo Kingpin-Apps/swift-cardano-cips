@@ -14,7 +14,7 @@ public enum CIP36Error: Error, Equatable {
     case invalidStakeCredentialLength(Int)
     /// The supplied nonce or voting purpose exceeds `Int.max` and
     /// cannot be encoded through the underlying
-    /// ``SwiftCardanoCore/TransactionMetadatum`` `.int` case.
+    /// `TransactionMetadatum` `.int` case (from `SwiftCardanoCore`).
     ///
     /// Mainnet slot heights are vastly below `Int.max` (≈ 1.4×10⁸ at
     /// time of writing vs `Int.max` = 9.2×10¹⁸), so this is a

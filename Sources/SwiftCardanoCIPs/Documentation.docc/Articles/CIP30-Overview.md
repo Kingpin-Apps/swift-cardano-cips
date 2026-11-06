@@ -14,9 +14,10 @@ dApp-Wallet web bridge: a JS interface dApps already speak.
 - A pair of protocols — ``CIP30Initial`` (unauthenticated; `info`, `enable`,
   `isEnabled`) and ``CIP30Provider`` (post-`enable`; all the chain queries
   and signing methods).
-- A reference implementation —  ``KeyStoreCIP30Initial`` and
-  ``KeyStoreCIP30Provider`` — backed by a single payment / stake key pair
-  plus your ``CIP30DataSource`` chain access.
+- A reference implementation — ``KeyStoreCIP30Initial`` and
+  ``KeyStoreCIP30Provider`` — backed by a payment key, an optional stake
+  key, and your ``CIP30DataSource`` chain access. It is a single-address
+  wallet.
 
 For the security model — origin scoping, identifier validation,
 per-operation approval — see <doc:CIP30-Security>.
@@ -80,14 +81,21 @@ const witnessSet = await api.signTx(txCborHex, false /* partialSign */);
 struct BlockfrostSource: CIP30DataSource {
     let client: BlockfrostClient
 
-    func utxos(for address: String) async throws -> [UTxO] { … }
+    func utxos(for address: Address) async throws -> [UTxO] { … }
     func submit(_ tx: Data) async throws -> String { … }
 }
 ```
 
-`utxos(for:)` is consulted whenever the dApp asks for UTxOs / balance /
-collateral; `submit(_:)` is what `submitTx` calls after the approval
-policy clears.
+`utxos(for:)` is consulted whenever the dApp asks for UTxOs, the balance,
+or used and unused addresses; `submit(_:)` is what `submitTx` calls after
+the approval policy clears. Without a data source, `getUtxos` and
+`getBalance` throw ``APIError/internalError(_:)`` and `submitTx` throws
+``TxSendError/failure(_:)``.
+
+The reference provider has two limits to know about: `getUtxos` ignores
+the `amount` argument and returns every UTxO (paginated if asked), and
+`getCollateral` returns `nil` (no collateral). Implement your own
+``CIP30Provider`` if you need either.
 
 ## Plugging in a custom provider
 

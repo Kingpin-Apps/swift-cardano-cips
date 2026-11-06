@@ -20,9 +20,20 @@ private let bridgeLog = Logger(subsystem: "swift-cardano-cips", category: "cip30
 ///
 /// Usage:
 /// ```swift
-/// let initial = KeyStoreCIP30Initial(info: info, consent: { _ in true }) { ext in
-///     try KeyStoreCIP30Provider(info: info, paymentKey: payment, network: .mainnet)
-/// }
+/// let initial = KeyStoreCIP30Initial(
+///     info: info,
+///     consent: { extensions, context in await askUser(context.origin, extensions) },
+///     makeProvider: { extensions, _ in
+///         try KeyStoreCIP30Provider(
+///             info: info,
+///             paymentKey: payment,
+///             network: .mainnet,
+///             dataSource: chainData,
+///             grantedExtensions: extensions,
+///             policy: approvals
+///         )
+///     }
+/// )
 /// let bridge = try CIP30WebBridge(initial: initial, walletKey: "swiftWallet")
 /// bridge.attach(to: webView)
 /// // dApp JS can now call: await window.cardano.swiftWallet.enable()

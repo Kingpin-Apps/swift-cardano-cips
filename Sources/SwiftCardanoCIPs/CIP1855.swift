@@ -79,12 +79,14 @@ public enum CIP1855 {
     /// Without `invalidBefore` this is a bare `sig` script (a policy that
     /// only requires the policy key's signature). With `invalidBefore` it is
     /// wrapped in an `all [ invalid_before(slot), sig ]` script — a
-    /// time-locked policy that becomes invalid at or after `slot`.
+    /// time-locked policy that can only be used from `slot` onwards
+    /// (cardano-cli calls this script type `"after"`). It does not make the
+    /// policy expire.
     ///
     /// - Parameters:
-    ///   - keyHash: The policy key's ``SwiftCardanoCore/VerificationKeyHash``.
-    ///   - invalidBefore: Optional slot at which the policy expires.
-    /// - Returns: The corresponding ``SwiftCardanoCore/NativeScript``.
+    ///   - keyHash: The policy key's `VerificationKeyHash` (from `SwiftCardanoCore`).
+    ///   - invalidBefore: Optional slot before which the policy can't be used.
+    /// - Returns: The corresponding `NativeScript` (from `SwiftCardanoCore`).
     public static func mintingPolicyScript(
         keyHash: VerificationKeyHash,
         invalidBefore: SlotNumber? = nil
@@ -100,11 +102,11 @@ public enum CIP1855 {
     /// Compute the policy ID (script hash) for a policy key hash.
     ///
     /// - Parameters:
-    ///   - keyHash: The policy key's ``SwiftCardanoCore/VerificationKeyHash``.
-    ///   - invalidBefore: Optional slot at which the policy expires; must
-    ///     match the value used when building the script for the IDs to
+    ///   - keyHash: The policy key's `VerificationKeyHash` (from `SwiftCardanoCore`).
+    ///   - invalidBefore: Optional slot before which the policy can't be used;
+    ///     must match the value used when building the script for the IDs to
     ///     agree.
-    /// - Returns: The ``SwiftCardanoCore/PolicyID`` (Blake2b-224 script hash).
+    /// - Returns: The `PolicyID` (Blake2b-224 script hash, from `SwiftCardanoCore`).
     /// - Throws: Any error raised while hashing the native script.
     public static func policyID(
         keyHash: VerificationKeyHash,

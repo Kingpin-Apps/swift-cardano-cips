@@ -85,9 +85,9 @@ public struct CIP30ApprovalPolicy: Sendable {
 ///
 /// This is intentionally minimal — a single-address wallet — but it composes enough of
 /// `SwiftCardanoCore` to be useful and to demonstrate that the protocol is actually
-/// implementable end-to-end. Wallets with HD-derived address sets should subclass the
-/// pattern: hold many keys, keep an internal address set, and override the address
-/// accessors.
+/// implementable end-to-end. Wallets with HD-derived address sets should follow the
+/// same pattern in their own ``CIP30Provider``: hold many keys, keep an internal address
+/// set, and implement the address accessors over it.
 ///
 /// **Approvals.** `signTx`, `signData`, and `submitTx` consult the `policy` supplied at
 /// `init` before doing any signing or network I/O. The default ``CIP30ApprovalPolicy/denyAll``
@@ -108,12 +108,14 @@ public actor KeyStoreCIP30Provider: CIP30Provider {
     ///   - info: Wallet metadata (name, icon, …) advertised via the initial API.
     ///   - paymentKey: The payment signing key. Used for `signTx`, `signData` (when the
     ///     supplied address is the payment-credential address), and to derive
-    ///     ``getChangeAddress``.
-    ///   - stakeKey: Optional stake signing key. Required for ``getRewardAddresses`` and
-    ///     for `signData` over a reward address.
+    ///     the address returned by ``getChangeAddress()``.
+    ///   - stakeKey: Optional stake signing key. Required for ``getRewardAddresses()`` to
+    ///     return an address, and for `signData` over a reward address.
     ///   - network: Network the wallet operates on.
-    ///   - dataSource: Source of UTxOs / submission. If `nil`, on-chain methods throw
-    ///     ``APIError/internalError(_:)``.
+    ///   - dataSource: Source of UTxOs / submission. If `nil`, `getUtxos` and `getBalance`
+    ///     throw ``APIError/internalError(_:)``, `submitTx` throws
+    ///     ``TxSendError/failure(_:)``, and both `getUsedAddresses` and
+    ///     `getUnusedAddresses` return the wallet's address.
     ///   - grantedExtensions: Extensions this provider instance has been granted (filled
     ///     in by ``KeyStoreCIP30Initial`` during `enable`).
     ///   - policy: Per-operation approval policy. Defaults to ``CIP30ApprovalPolicy/denyAll``
