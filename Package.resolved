@@ -1,5 +1,5 @@
 {
-  "originHash" : "0481022148068e67fe785867a376f238dc5d2768c1aad85a47513ad082393666",
+  "originHash" : "9cb7f1ec66182f3633f95db801a2e8b4dcc2d48caf83d4c1ccd205ea4729460e",
   "pins" : [
     {
       "identity" : "base32",
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-base58.git",
       "state" : {
-        "revision" : "009c0635973723323ca04f30a1323e03d5952bd2",
-        "version" : "0.1.5"
+        "revision" : "93101beaf45fedae450d78f6413bf0d2362691ab",
+        "version" : "0.2.0"
       }
     },
     {
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cardano-core.git",
       "state" : {
-        "revision" : "1ad20e350f83f3bc6bb7c4e90e1966e554a433c3",
-        "version" : "0.10.2"
+        "revision" : "62d8ce2f790b509c04f71cc9119703b1408bf7e1",
+        "version" : "0.11.0"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cbor-codable.git",
       "state" : {
-        "revision" : "033d1cc3b0a055f28a65d4301d6aa751ec06fbd2",
-        "version" : "0.5.0"
+        "revision" : "69ba1b0ec649e3f8e4b52f5dc6ce77ddc6178285",
+        "version" : "0.6.0"
       }
     },
     {
@@ -150,8 +150,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-kes.git",
       "state" : {
-        "revision" : "fefaa18a5351ef85fc911a8c9bde75e5d6e86869",
-        "version" : "1.0.3"
+        "revision" : "bfaae44b62c3a605950522c52cabfe8de068591d",
+        "version" : "1.0.5"
       }
     },
     {
@@ -168,8 +168,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-mnemonic.git",
       "state" : {
-        "revision" : "97ac7a4a2dc7ef329fe0fb8d6e3e3400fedafbc4",
-        "version" : "0.2.7"
+        "revision" : "90b010176b489996a6169ea610723fa9228ec7ce",
+        "version" : "0.3.0"
       }
     },
     {
@@ -177,8 +177,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-nacl.git",
       "state" : {
-        "revision" : "32aac9e9f00f362a359b198bc76eae4fa95f329f",
-        "version" : "1.1.0"
+        "revision" : "be05b4970ec37295f9a0605ae57a927a37b4feaf",
+        "version" : "2.0.0"
       }
     },
     {
