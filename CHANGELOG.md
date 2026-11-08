@@ -1,3 +1,12 @@
+## 0.5.0 (2026-11-08)
+
+### Fix
+
+- **cip100**: refuse non-UTF-8 documents and bound CIP-119 JSON depth
+- **cip14**: decode hex strictly and check policy and name lengths
+- **cip30**: keep revocations through pending enables and sign the requested address
+- **cip21**: throw on huge lengths, invalid text, stray breaks and deep nesting
+
 ## 0.4.5 (2026-11-08)
 
 ### Fix
