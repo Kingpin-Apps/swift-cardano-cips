@@ -456,6 +456,18 @@ public actor KeyStoreCIP30Provider: CIP30Provider {
             throw DataSignError.addressNotPK("Address has no signable credential")
         }
 
+        // The address must be one this wallet owns, in full and on its network, so the
+        // address shown to the user is exactly the address the signature binds.
+        guard target.network == network.networkId else {
+            throw DataSignError.proofGeneration("Address is not on the wallet's network")
+        }
+        let enterprise = try Address(paymentPart: address.paymentPart, stakingPart: nil, network: network.networkId)
+        let owned = [address, enterprise] + (rewardAddress.map { [$0] } ?? [])
+        let targetBytes = target.toBytes()
+        guard owned.contains(where: { $0.toBytes() == targetBytes }) else {
+            throw DataSignError.proofGeneration("Address is not one of this wallet's addresses")
+        }
+
         // Address validity is checked above so we don't bother the user about a request
         // we can't fulfil anyway. Approval is the last gate before signing.
         guard await policy.approveSignData(target, payload, context) else {
@@ -468,7 +480,8 @@ public actor KeyStoreCIP30Provider: CIP30Provider {
                 payload: payload,
                 signingKey: keyForSigning,
                 attachCoseKey: true,
-                network: network
+                network: network,
+                address: target
             )
         } catch {
             throw DataSignError.proofGeneration("CIP-8 signing failed: \(error)")
@@ -566,13 +579,20 @@ public final class KeyStoreCIP30Initial: CIP30Initial {
         await enabledOrigins.contains(context.origin)
     }
 
+    /// Runs the consent prompt, then builds the provider. The origin is recorded as
+    /// enabled only after both succeed, and only if `invalidate(origin:)` did not run
+    /// while they were in progress; otherwise this throws ``APIError/refused(_:)``.
     public func enable(extensions: [Extension], context: CIP30RequestContext) async throws -> CIP30Provider {
+        let generation = await enabledOrigins.generation(of: context.origin)
         let granted = await consent(extensions, context)
         guard granted else {
             throw APIError.refused("User declined access for origin \(context.origin)")
         }
-        await enabledOrigins.insert(context.origin)
-        return try await makeProvider(extensions, context)
+        let provider = try await makeProvider(extensions, context)
+        guard await enabledOrigins.insert(context.origin, ifGeneration: generation) else {
+            throw APIError.refused("Access for origin \(context.origin) was revoked while enable was pending")
+        }
+        return provider
     }
 
     public func invalidate(origin: String) async {
@@ -581,11 +601,20 @@ public final class KeyStoreCIP30Initial: CIP30Initial {
 }
 
 /// Internal actor used by ``KeyStoreCIP30Initial`` to track which origins have completed
-/// `enable(...)`. Replaces the old single-bool `EnabledBox`.
+/// `enable(...)`. Each removal bumps the origin's generation, so an `enable` that
+/// started before a revocation cannot record the origin afterwards.
 private actor EnabledOriginsBox {
     private var origins: Set<String> = []
+    private var generations: [String: UInt64] = [:]
     func contains(_ origin: String) -> Bool { origins.contains(origin) }
-    func insert(_ origin: String) { origins.insert(origin) }
-    func remove(_ origin: String) { origins.remove(origin) }
-    func clear() { origins.removeAll() }
+    func generation(of origin: String) -> UInt64 { generations[origin, default: 0] }
+    func insert(_ origin: String, ifGeneration generation: UInt64) -> Bool {
+        guard generations[origin, default: 0] == generation else { return false }
+        origins.insert(origin)
+        return true
+    }
+    func remove(_ origin: String) {
+        origins.remove(origin)
+        generations[origin, default: 0] &+= 1
+    }
 }

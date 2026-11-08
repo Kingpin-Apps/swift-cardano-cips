@@ -81,18 +81,25 @@ public struct CIP8 {
     ///     (CIP-30 `signData` shape). When `false`, the verification key is embedded in
     ///     the protected header as `kid`.
     ///   - network: Network to use when deriving the signing address.
+    ///   - address: The address to put in the protected header, such as the address a
+    ///     CIP-30 dApp asked to sign for. It must be on `network`, and its payment
+    ///     credential (or, for a reward address, its staking credential) must be this
+    ///     key's hash, or this throws ``CIP8Error/invalidAddress(_:)``. When `nil`, the
+    ///     enterprise or reward address of the key is used.
     /// - Returns: The signed message.
     public static func sign(
         payload: Data,
         signingKey: SigningKeyType,
         attachCoseKey: Bool = false,
-        network: Network = .mainnet
+        network: Network = .mainnet,
+        address: Address? = nil
     ) throws -> SignedMessage {
         return try _sign(
             payload: payload,
             signingKey: signingKey,
             attachCoseKey: attachCoseKey,
-            network: network
+            network: network,
+            requestedAddress: address
         )
     }
 
@@ -117,7 +124,8 @@ public struct CIP8 {
             payload: Data(message.utf8),
             signingKey: signingKey,
             attachCoseKey: attachCoseKey,
-            network: network
+            network: network,
+            requestedAddress: nil
         )
     }
 
@@ -125,9 +133,10 @@ public struct CIP8 {
         payload: Data,
         signingKey: SigningKeyType,
         attachCoseKey: Bool,
-        network: Network
+        network: Network,
+        requestedAddress: Address?
     ) throws -> SignedMessage {
-        let address: Address
+        var address: Address
         let verificationKey: any VerificationKeyProtocol
         let networkId = network.networkId
 
@@ -173,6 +182,26 @@ public struct CIP8 {
                 }
         }
         
+        if let requestedAddress {
+            let keyHash = try verificationKey.hash()
+            guard requestedAddress.network == networkId else {
+                throw CIP8Error.invalidAddress("The address is not on the signing network")
+            }
+            let credentialMatches: Bool
+            switch (requestedAddress.paymentPart, requestedAddress.stakingPart) {
+            case (.verificationKeyHash(let hash)?, _):
+                credentialMatches = hash == keyHash
+            case (nil, .verificationKeyHash(let hash)?):
+                credentialMatches = hash == keyHash
+            default:
+                credentialMatches = false
+            }
+            guard credentialMatches else {
+                throw CIP8Error.invalidAddress("The address's credential is not the signing key's hash")
+            }
+            address = requestedAddress
+        }
+
         let addressHeader = CoseHeaderAttribute(
             customIdentifier: nil,
             fullname: "address"

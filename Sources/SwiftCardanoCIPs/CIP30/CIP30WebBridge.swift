@@ -66,6 +66,16 @@ public final class CIP30WebBridge: NSObject {
     /// origin it ran for; cross-origin requests look up an empty slot and are refused.
     private var providers: [String: CIP30Provider] = [:]
 
+    /// Bumped by ``invalidate(origin:)`` for one origin and by ``invalidateAll()`` for
+    /// every origin. An `enable` stores its provider only if neither changed while it
+    /// waited for consent, so a revocation always wins over a prompt that was open.
+    private var revocations: [String: UInt64] = [:]
+    private var revocationEpoch: UInt64 = 0
+
+    /// Origins whose `enable` is waiting for consent, so ``invalidateAll()`` can also
+    /// clear the initial API's state for them.
+    private var pendingOrigins: [String: Int] = [:]
+
     /// Identifier validation rule applied to `walletKey` and `messageHandlerName`. Both
     /// strings are interpolated verbatim into the JS shim; restricting them to a JS-safe
     /// character set closes the only injection vector in the shim.
@@ -208,13 +218,16 @@ public final class CIP30WebBridge: NSObject {
     /// disconnects the dApp, or when you observe a `WKWebView` navigation away from
     /// `origin` and want to require fresh consent on return.
     public func invalidate(origin: String) async {
+        revocations[origin, default: 0] &+= 1
         providers.removeValue(forKey: origin)
         await initialAPI.invalidate(origin: origin)
     }
 
-    /// Forget the enable state for every origin. Useful on app sign-out.
+    /// Forget the enable state for every origin, including origins whose `enable` is
+    /// still waiting for consent. Useful on app sign-out.
     public func invalidateAll() async {
-        let origins = Array(providers.keys)
+        revocationEpoch &+= 1
+        let origins = Set(providers.keys).union(pendingOrigins.keys)
         providers.removeAll()
         for origin in origins {
             await initialAPI.invalidate(origin: origin)
@@ -325,8 +338,19 @@ public final class CIP30WebBridge: NSObject {
             let exts = (params["extensions"] as? [[String: Any]] ?? []).compactMap {
                 ($0["cip"] as? Int).map(Extension.init)
             }
+            let origin = context.origin
+            let started = (revocations[origin, default: 0], revocationEpoch)
+            pendingOrigins[origin, default: 0] += 1
+            defer {
+                pendingOrigins[origin, default: 1] -= 1
+                if pendingOrigins[origin] == 0 { pendingOrigins.removeValue(forKey: origin) }
+            }
             let provider = try await initialAPI.enable(extensions: exts, context: context)
-            self.providers[context.origin] = provider
+            guard started == (revocations[origin, default: 0], revocationEpoch) else {
+                await initialAPI.invalidate(origin: origin)
+                throw APIError.refused("Access for origin \(origin) was revoked while enable was pending")
+            }
+            self.providers[origin] = provider
             return NSNull()  // dApp side wraps this in fullApi()
         default:
             return try await dispatchProvider(method: method, params: params, context: context)
