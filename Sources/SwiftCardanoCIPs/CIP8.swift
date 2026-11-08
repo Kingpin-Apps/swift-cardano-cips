@@ -33,11 +33,15 @@ public struct SignedMessage {
 /// Verification result of a signed message.
 /// - Parameters:
 ///  - verified: Whether the signature is verified
-///  - message: The message that was signed
+///  - message: The signed payload as strict UTF-8 text, or an empty
+///    string when the payload is not valid UTF-8. Compare ``payload``
+///    when the exact signed bytes matter.
+///  - payload: The exact payload bytes the signature covers
 ///  - signingAddress: The address that signed the message
 public struct VerificationResult {
     public let verified: Bool
     public let message: String
+    public let payload: Data
     public let signingAddress: Address
 }
 
@@ -54,6 +58,13 @@ public struct VerificationResult {
 //}
 
 public struct CIP8 {
+
+    /// Whether a key's text-envelope type names a stake key. A stake key
+    /// held as a generic key struct (for example straight from HD
+    /// derivation) still carries its role here.
+    static func isStakeEnvelope(_ type: String) -> Bool {
+        type.hasPrefix("StakeSigningKey") || type.hasPrefix("StakeExtendedSigningKey")
+    }
     
     /// Sign an arbitrary byte payload with a payment or stake key following CIP-0008.
     ///
@@ -123,7 +134,7 @@ public struct CIP8 {
         // Derive verification key and address based on key type
         switch signingKey {
             case .signingKey(let sKey):
-                if sKey is StakeSigningKey {
+                if sKey is StakeSigningKey || Self.isStakeEnvelope(sKey.type) {
                     let vkey: StakeVerificationKey = try sKey.toVerificationKey()
                     address = try Address(
                         paymentPart: nil,
@@ -141,7 +152,7 @@ public struct CIP8 {
                     verificationKey = vkey
                 }
             case .extendedSigningKey(let extendedSKey):
-                if extendedSKey is StakeExtendedSigningKey {
+                if extendedSKey is StakeExtendedSigningKey || Self.isStakeEnvelope(extendedSKey.type) {
                     let extendedVKey: StakeExtendedVerificationKey = try extendedSKey.toVerificationKey()
                     let vkey: StakeVerificationKey = try extendedVKey.toNonExtended()
                     address = try Address(
@@ -332,7 +343,8 @@ public struct CIP8 {
 
         return VerificationResult(
             verified: signatureVerified && addressesMatch,
-            message: sign1.payload.toString,
+            message: String(data: sign1.payload, encoding: .utf8) ?? "",
+            payload: sign1.payload,
             signingAddress: signingAddress
         )
     }
