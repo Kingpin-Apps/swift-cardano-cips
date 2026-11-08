@@ -1,3 +1,11 @@
+## 0.4.4 (2026-11-08)
+
+### Fix
+
+- **cip100**: bound canonicalization, hash strictly and count every listed author
+- **cip8**: return the exact signed payload and bind stake keys by envelope type
+- **cip36**: sign the label-wrapped sign_data that CIP-36 verifiers rebuild
+
 ## 0.4.3 (2026-11-07)
 
 ## 0.4.2 (2026-11-06)
