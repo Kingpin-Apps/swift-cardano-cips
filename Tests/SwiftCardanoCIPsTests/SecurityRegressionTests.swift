@@ -46,6 +46,25 @@ struct SecurityRegressionTests {
         }
     }
 
+    @Test("Nesting at JSONSerialization's own limit throws instead of overflowing a cooperative-thread stack")
+    func nestingAtParserLimit() async throws {
+        for depth in [400, 510] {
+            let objects = String(repeating: #"{"a":"#, count: depth) + #""x""# + String(repeating: "}", count: depth)
+            let arrays = String(repeating: "[", count: depth) + "1" + String(repeating: "]", count: depth)
+            for body in [objects, arrays] {
+                await #expect(throws: CIP100Error.self) {
+                    _ = try await CIP100.verifyMetadata(Self.doc(body))
+                }
+            }
+        }
+    }
+
+    @Test("Brackets inside strings do not count toward nesting depth")
+    func bracketsInStrings() throws {
+        let text = String(repeating: "[{", count: 200) + #"\"["#
+        try CIP100.checkRawNestingDepth(Data(#"{"body":{"t":"\#(text)"}}"#.utf8))
+    }
+
     @Test("Strict mode rejects a context remap and unmapped keys that would hide visible text")
     func contextRemap() async throws {
         let context = #"{"CIP108":"https://github.com/cardano-foundation/CIPs/blob/master/CIP-0108/README.md#","body":{"@id":"CIP108:body","@context":{"title":"CIP108:title","rationale":"CIP108:rationale"}}}"#

@@ -350,6 +350,10 @@ public enum CIP100 {
     // MARK: - JSON helpers
 
     private static func parseAsObject(_ data: Data) throws -> [String: Any] {
+        // Apple's JSONSerialization recurses per nesting level and overflows a
+        // 512 KiB cooperative-thread stack at about 500 levels, so the depth
+        // is checked on the raw bytes before it runs.
+        try checkRawNestingDepth(data)
         let parsed: Any
         do {
             parsed = try JSONSerialization.jsonObject(with: data, options: [])
@@ -374,6 +378,31 @@ public enum CIP100 {
             } else if let object = value as? [String: Any] {
                 guard depth <= maxNestingDepth else { throw nestingError }
                 for item in object.values { stack.append((item, depth + 1)) }
+            }
+        }
+    }
+
+    /// Counts `[`/`{` nesting in raw JSON bytes, skipping string contents.
+    /// Malformed input is left for JSONSerialization to reject.
+    static func checkRawNestingDepth(_ data: Data) throws {
+        var depth = 0
+        var inString = false
+        var escaped = false
+        for byte in data {
+            if inString {
+                if escaped { escaped = false }
+                else if byte == UInt8(ascii: "\\") { escaped = true }
+                else if byte == UInt8(ascii: "\"") { inString = false }
+                continue
+            }
+            switch byte {
+            case UInt8(ascii: "\""): inString = true
+            case UInt8(ascii: "["), UInt8(ascii: "{"):
+                depth += 1
+                guard depth <= maxNestingDepth else { throw nestingError }
+            case UInt8(ascii: "]"), UInt8(ascii: "}"):
+                depth -= 1
+            default: break
             }
         }
     }
