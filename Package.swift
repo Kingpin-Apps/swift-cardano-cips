@@ -27,7 +27,7 @@ let package = Package(
         .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.5.0"),
         // 1.3.2 takes BigInt 6 as well as 5, so this package can sit beside apps on BigInt 6.
         .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", from: "2.0.1"),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.11.0"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cardano-core.git", from: "0.11.2"),
         .package(url: "https://github.com/Kingpin-Apps/swift-nacl.git", .upToNextMinor(from: "2.0.0")),
         .package(url: "https://github.com/Kingpin-Apps/swift-jsonld.git", .upToNextMinor(from: "0.1.5")),
     ],
