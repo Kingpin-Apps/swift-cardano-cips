@@ -1,3 +1,9 @@
+## 0.4.5 (2026-11-08)
+
+### Fix
+
+- check CIP-100 nesting depth before JSONSerialization parses it
+
 ## 0.4.4 (2026-11-08)
 
 ### Fix
