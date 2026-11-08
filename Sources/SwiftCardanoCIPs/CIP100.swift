@@ -132,13 +132,14 @@ public enum CIP100 {
     public static func signMetadata(
         document: Data,
         signingKey: SigningKeyType,
-        authorName: String? = nil
+        authorName: String? = nil,
+        strict: Bool = true
     ) async throws -> Data {
         // 1. Parse the document.
         var rootObject = try parseAsObject(document)
 
         // 2. Compute the signing payload.
-        let hash = try await canonicalBodyHash(of: rootObject)
+        let hash = try await canonicalBodyHash(of: rootObject, strict: strict)
 
         // 3. Sign with Ed25519.
         let signature: Data
@@ -182,7 +183,13 @@ public enum CIP100 {
         authors.append(authorEntry)
         rootObject["authors"] = authors
 
-        return try serialize(rootObject)
+        // 7. The returned bytes must hash to what was signed, or the new
+        //    witness would not verify for anyone reading them.
+        let output = try serialize(rootObject)
+        guard try await canonicalBodyHash(of: parseAsObject(output), strict: strict) == hash else {
+            throw CIP100Error.serializationFailed("the serialized document does not hash to the signed body hash")
+        }
+        return output
     }
 
     // MARK: - Verify
@@ -196,21 +203,36 @@ public enum CIP100 {
     ///   verified successfully against the document's canonical body
     ///   hash. `allValid` is `false` if there are no authors.
     public static func verifyMetadata(
-        _ document: Data
+        _ document: Data,
+        strict: Bool = true
     ) async throws -> VerificationResult {
         let rootObject = try parseAsObject(document)
 
-        let hash = try await canonicalBodyHash(of: rootObject)
+        let hash = try await canonicalBodyHash(of: rootObject, strict: strict)
 
-        let authors = (rootObject["authors"] as? [Any]) ?? []
+        let authors: [Any]
+        switch rootObject["authors"] {
+        case nil: authors = []
+        case let list as [Any]: authors = list
+        default: throw CIP100Error.invalidJSON("authors is not an array")
+        }
         var results: [VerificationResult.AuthorResult] = []
         for raw in authors {
-            guard let entry = raw as? [String: Any] else { continue }
+            // Every listed author counts. An entry that cannot be read
+            // as a witness is recorded as invalid, so allValid can never
+            // be true while the document lists an author who did not sign.
+            guard let entry = raw as? [String: Any] else {
+                results.append(.init(name: nil, publicKey: Data(), valid: false))
+                continue
+            }
             let name = entry["name"] as? String
             guard let witnessObject = entry["witness"] as? [String: Any],
                   let alg = witnessObject["witnessAlgorithm"] as? String,
                   let pubHex = witnessObject["publicKey"] as? String,
                   let sigHex = witnessObject["signature"] as? String else {
+                let listedKey = ((entry["witness"] as? [String: Any])?["publicKey"] as? String)
+                    .flatMap { Data(hexLowercase: $0) } ?? Data()
+                results.append(.init(name: name, publicKey: listedKey, valid: false))
                 continue
             }
             guard alg == witnessAlgorithmEd25519 else {
@@ -266,12 +288,21 @@ public enum CIP100 {
     ///
     /// Exposed so callers can pre-compute the hash (e.g. for an external
     /// HSM-backed signer) without going through ``signMetadata(document:signingKey:authorName:)``.
-    public static func canonicalBodyHash(of document: Data) async throws -> Data {
+    public static func canonicalBodyHash(of document: Data, strict: Bool = true) async throws -> Data {
         let rootObject = try parseAsObject(document)
-        return try await canonicalBodyHash(of: rootObject)
+        return try await canonicalBodyHash(of: rootObject, strict: strict)
     }
 
-    private static func canonicalBodyHash(of rootObject: [String: Any]) async throws -> Data {
+    /// RDF canonicalization work factor for documents from other parties.
+    /// Real governance documents have few indistinguishable blank nodes;
+    /// poison graphs fail fast instead of running for hours.
+    static let canonicalizationWorkFactor = 2
+
+    /// Deepest array/object nesting accepted. Real documents are a few
+    /// levels deep; the limit keeps conversion within a small thread stack.
+    static let maxNestingDepth = 64
+
+    private static func canonicalBodyHash(of rootObject: [String: Any], strict: Bool) async throws -> Data {
         // Witnesses sign the `body` only (CIP-100 "Hashing and Signatures";
         // test-vector.md step 1: "remove any top-level fields that are not
         // `@context` or `body`"). Other top-level fields such as
@@ -285,10 +316,18 @@ public enum CIP100 {
         }
 
         // Bridge into the JSONLD.JSON type and canonicalize.
-        let jsonValue = JSONLD.JSON.fromFoundation(stripped)
+        let jsonValue = try JSONLD.JSON.fromFoundation(stripped)
+        var options = JSONLD.Options()
+        // Strict mode refuses keys that JSON-LD expansion would drop, so
+        // every key a reader sees in `body` is covered by the hash.
+        // cardano-signer.js hashes with jsonld.js `safe: false`; pass
+        // `strict: false` only to accept such documents as it does.
+        options.safeMode = strict
+        options.canonicalizationWorkFactor = canonicalizationWorkFactor
+        options.maxNestingDepth = maxNestingDepth
         let canonical: String
         do {
-            canonical = try await JSONLD.canonize(jsonValue)
+            canonical = try await JSONLD.canonize(jsonValue, options: options)
         } catch {
             throw CIP100Error.canonicalizationFailed(String(describing: error))
         }
@@ -317,10 +356,30 @@ public enum CIP100 {
         } catch {
             throw CIP100Error.invalidJSON(String(describing: error))
         }
+        try checkNestingDepth(parsed)
         guard let dict = parsed as? [String: Any] else {
             throw CIP100Error.notAnObject
         }
         return dict
+    }
+
+    /// Iterative depth check on parsed Foundation JSON, run before any
+    /// recursive conversion touches it.
+    private static func checkNestingDepth(_ root: Any) throws {
+        var stack: [(Any, Int)] = [(root, 1)]
+        while let (value, depth) = stack.popLast() {
+            if let array = value as? [Any] {
+                guard depth <= maxNestingDepth else { throw nestingError }
+                for item in array { stack.append((item, depth + 1)) }
+            } else if let object = value as? [String: Any] {
+                guard depth <= maxNestingDepth else { throw nestingError }
+                for item in object.values { stack.append((item, depth + 1)) }
+            }
+        }
+    }
+
+    private static var nestingError: CIP100Error {
+        .invalidJSON("document nests arrays or objects deeper than \(maxNestingDepth) levels")
     }
 
     private static func serialize(_ object: [String: Any]) throws -> Data {
@@ -370,7 +429,7 @@ private extension JSONLD.JSON {
     /// `Bool` and integer/float numerics, and on Foundation both forms
     /// satisfy `is NSNumber`. We disambiguate by checking `CFGetTypeID`
     /// against `CFBooleanGetTypeID()`.
-    static func fromFoundation(_ value: Any) -> JSONLD.JSON {
+    static func fromFoundation(_ value: Any) throws -> JSONLD.JSON {
         if value is NSNull {
             return .null
         }
@@ -378,15 +437,20 @@ private extension JSONLD.JSON {
             return .string(s)
         }
         if let arr = value as? [Any] {
-            return .array(arr.map { JSONLD.JSON.fromFoundation($0) })
+            return .array(try arr.map { try JSONLD.JSON.fromFoundation($0) })
         }
         if let dict = value as? [String: Any] {
-            return .object(
-                Dictionary(
-                    uniqueKeysWithValues:
-                        dict.map { ($0.key, JSONLD.JSON.fromFoundation($0.value)) }
-                )
-            )
+            // Keys that differ only in Unicode normalization compare equal
+            // as Swift Strings. Reject such a document instead of letting
+            // a dictionary initializer trap on the duplicate.
+            var object: [String: JSONLD.JSON] = [:]
+            for (key, item) in dict {
+                guard object[key] == nil else {
+                    throw CIP100Error.invalidJSON("duplicate or canonically equivalent key '\(CIP100.truncatedForError(key))'")
+                }
+                object[key] = try JSONLD.JSON.fromFoundation(item)
+            }
+            return .object(object)
         }
         if let num = value as? NSNumber {
             #if canImport(Darwin)
@@ -402,7 +466,7 @@ private extension JSONLD.JSON {
             case .float32Type, .float64Type, .cgFloatType, .floatType, .doubleType:
                 return .double(num.doubleValue)
             default:
-                return .int(num.int64Value)
+                return try exactInteger(num)
             }
             #else
             // swift-corelibs-foundation (Linux/Windows) doesn't expose the
@@ -416,14 +480,22 @@ private extension JSONLD.JSON {
             case 0x66 /* 'f' */, 0x64 /* 'd' */:
                 return .double(num.doubleValue)
             default:
-                return .int(num.int64Value)
+                return try exactInteger(num)
             }
             #endif
         }
-        // Fallback for anything else — represent as string so we don't
-        // silently drop data, but it should never trigger for output of
-        // JSONSerialization.
-        return .string(String(describing: value))
+        throw CIP100Error.invalidJSON("unsupported JSON value of type \(type(of: value))")
+    }
+
+    /// An integer that Int64 holds exactly. A larger one (for example
+    /// 2^64 - 1, which `int64Value` would wrap to -1) is rejected, so two
+    /// different documents can never share a canonical form.
+    private static func exactInteger(_ num: NSNumber) throws -> JSONLD.JSON {
+        let value = num.int64Value
+        guard String(value) == num.stringValue else {
+            throw CIP100Error.invalidJSON("integer out of the Int64 range: \(CIP100.truncatedForError(num.stringValue))")
+        }
+        return .int(value)
     }
 }
 
