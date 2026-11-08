@@ -384,7 +384,15 @@ public enum CIP100 {
 
     /// Counts `[`/`{` nesting in raw JSON bytes, skipping string contents.
     /// Malformed input is left for JSONSerialization to reject.
+    ///
+    /// The count only means something for UTF-8, so other encodings are
+    /// refused first: JSONSerialization also reads UTF-16 and UTF-32, whose
+    /// bytes this scanner would misread. Those encodings always contain a
+    /// zero byte, which valid JSON in UTF-8 never does.
     static func checkRawNestingDepth(_ data: Data) throws {
+        guard !data.contains(0), String(decoding: data, as: UTF8.self).utf8.elementsEqual(data) else {
+            throw CIP100Error.invalidJSON("document is not UTF-8")
+        }
         var depth = 0
         var inString = false
         var escaped = false
@@ -402,6 +410,7 @@ public enum CIP100 {
                 guard depth <= maxNestingDepth else { throw nestingError }
             case UInt8(ascii: "]"), UInt8(ascii: "}"):
                 depth -= 1
+                guard depth >= 0 else { throw CIP100Error.invalidJSON("unbalanced brackets") }
             default: break
             }
         }

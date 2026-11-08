@@ -379,3 +379,40 @@ private extension JSONSerializable {
         }
     }
 }
+
+// MARK: - Bounded JSON parsing
+
+/// Runs core's `fromJSON` only after the nesting depth is checked on the raw
+/// bytes. DRep metadata comes from third parties, and Apple's JSONSerialization
+/// can overflow a 512 KiB cooperative-thread stack on deeply nested input before
+/// its own limit applies.
+private func boundedFromJSON<T: JSONSerializable>(_ type: T.Type, _ json: String) throws -> T {
+    do {
+        try CIP100.checkRawNestingDepth(Data(json.utf8))
+    } catch {
+        throw CIP119Error.deserialize("\(T.self): \(error)")
+    }
+    return try T.fromJSON(json)
+}
+
+extension DRepMetadata {
+    /// Parses DRep metadata JSON, refusing input nested deeper than
+    /// 64 levels before the recursive parser runs.
+    public static func fromJSON(_ json: String) throws -> DRepMetadata {
+        try boundedFromJSON(DRepMetadata.self, json)
+    }
+}
+
+extension ImageObject {
+    /// Parses image JSON with the same depth bound as ``DRepMetadata/fromJSON(_:)``.
+    public static func fromJSON(_ json: String) throws -> ImageObject {
+        try boundedFromJSON(ImageObject.self, json)
+    }
+}
+
+extension Reference {
+    /// Parses reference JSON with the same depth bound as ``DRepMetadata/fromJSON(_:)``.
+    public static func fromJSON(_ json: String) throws -> Reference {
+        try boundedFromJSON(Reference.self, json)
+    }
+}
