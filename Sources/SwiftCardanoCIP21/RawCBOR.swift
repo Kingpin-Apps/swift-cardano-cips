@@ -42,6 +42,12 @@ struct RawCBOR: Sendable, Equatable {
     }
 
     struct Reader {
+        /// Real transactions nest a few dozen levels at most. The reader
+        /// and the checks recurse, and a debug build on a 512 KiB
+        /// cooperative-thread stack overflows somewhere past 100 levels,
+        /// so the limit is 64.
+        static let maxDepth = 64
+
         let bytes: [UInt8]
         var offset = 0
 
@@ -51,10 +57,14 @@ struct RawCBOR: Sendable, Equatable {
             return bytes[offset]
         }
 
-        mutating func take(_ count: Int) throws -> [UInt8] {
-            guard count >= 0, offset + count <= bytes.count else { throw ReadError(description: "The bytes end early.") }
-            defer { offset += count }
-            return Array(bytes[offset..<offset + count])
+        /// The next `count` bytes. The count stays a `UInt64` until it is
+        /// checked against what is left, so a length near 2^64 throws
+        /// instead of trapping.
+        mutating func take(_ count: UInt64) throws -> [UInt8] {
+            guard count <= UInt64(bytes.count - offset) else { throw ReadError(description: "The bytes end early.") }
+            let n = Int(count)
+            defer { offset += n }
+            return Array(bytes[offset..<offset + n])
         }
 
         /// A head: its major type, its argument (nil when indefinite) and
@@ -83,7 +93,7 @@ struct RawCBOR: Sendable, Equatable {
         }
 
         mutating func item(depth: Int) throws -> RawCBOR {
-            guard depth < 512 else { throw ReadError(description: "Nested too deep.") }
+            guard depth < Self.maxDepth else { throw ReadError(description: "Nested too deep.") }
             let start = offset
             let (major, info, argument, overlong) = try head()
             func done(_ kind: Kind, overlong: Bool = overlong, indefinite: Bool = false) -> RawCBOR {
@@ -100,7 +110,7 @@ struct RawCBOR: Sendable, Equatable {
                 var content: [UInt8] = []
                 var chunkOverlong = overlong
                 if let argument {
-                    content = try take(Int(argument))
+                    content = try take(argument)
                 } else {
                     while true {
                         guard offset < bytes.count else { throw ReadError(description: "The bytes end early.") }
@@ -113,11 +123,17 @@ struct RawCBOR: Sendable, Equatable {
                             throw ReadError(description: "A bad string chunk at byte \(offset).")
                         }
                         chunkOverlong = chunkOverlong || chunk.overlong
-                        content += try take(Int(length))
+                        content += try take(length)
                     }
                 }
                 if major == 2 { return done(.bytes(Data(content)), overlong: chunkOverlong, indefinite: argument == nil) }
-                return done(.text(String(decoding: content, as: UTF8.self)), overlong: chunkOverlong, indefinite: argument == nil)
+                // Text must be valid UTF-8. A lossy decode would let
+                // compatibleBody rewrite it into different bytes.
+                let text = String(decoding: content, as: UTF8.self)
+                guard text.utf8.elementsEqual(content) else {
+                    throw ReadError(description: "Text that is not valid UTF-8 at byte \(start).")
+                }
+                return done(.text(text), overlong: chunkOverlong, indefinite: argument == nil)
             case 4:
                 var items: [RawCBOR] = []
                 if let argument {
@@ -140,7 +156,12 @@ struct RawCBOR: Sendable, Equatable {
                 guard let argument else { throw ReadError(description: "An indefinite tag at byte \(start).") }
                 return done(.tag(argument, try item(depth: depth + 1)))
             default:
-                _ = info
+                // A break byte is only valid as the end of an indefinite
+                // container, which the callers consume themselves.
+                guard let argument else { throw ReadError(description: "A stray break at byte \(start).") }
+                if info == 24, argument < 32 {
+                    throw ReadError(description: "A simple value written in two bytes at byte \(start).")
+                }
                 return done(.simple(Data(bytes[start..<offset])))
             }
         }
