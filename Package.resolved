@@ -1,5 +1,5 @@
 {
-  "originHash" : "9cb7f1ec66182f3633f95db801a2e8b4dcc2d48caf83d4c1ccd205ea4729460e",
+  "originHash" : "c7c468ad87608a16005836a276f7c3c8735379d08713066a1c63fc2df469fabc",
   "pins" : [
     {
       "identity" : "base32",
@@ -141,8 +141,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-jsonld.git",
       "state" : {
-        "revision" : "035741f377f59448de1480751ad59682ae9061cb",
-        "version" : "0.1.3"
+        "revision" : "80e56c1dcd856c62d23e816e0ae5fae116d555b2",
+        "version" : "0.1.4"
       }
     },
     {
@@ -195,8 +195,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-rdf-canonize.git",
       "state" : {
-        "revision" : "8c0c4cca908e323f88a2b91bcd985144101c6a80",
-        "version" : "0.2.2"
+        "revision" : "9b25ad1a2449b9df243cff8908d164aa5f07a867",
+        "version" : "0.2.3"
       }
     },
     {
