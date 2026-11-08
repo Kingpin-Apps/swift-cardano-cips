@@ -3,9 +3,12 @@ import Testing
 import SwiftCardanoCore
 @testable import SwiftCardanoCIPs
 
-/// Golden vectors for the signed CIP-36 and CIP-88 metadata. The bytes were
-/// produced by this package built against SwiftCardanoCore 0.4.6, before the
-/// port to 0.10, so they pin the exact CBOR that is signed.
+/// Golden vectors for the signed CIP-36 and CIP-88 metadata. The payload bytes
+/// were produced by this package built against SwiftCardanoCore 0.4.6, before
+/// the port to 0.10. The CIP-36 witnesses were regenerated when signing moved
+/// to the label-wrapped sign_data ({61284|61286: payload}) used by
+/// cardano-signer and the Ledger Cardano app; CIP36Tests checks them against
+/// that scope independently.
 @Suite("CIP-36 / CIP-88 — golden CBOR vectors")
 struct CIP36CIP88VectorTests {
 
@@ -35,8 +38,9 @@ struct CIP36CIP88VectorTests {
         )
         #expect(try Self.labelHex(aux, CIP36.registrationLabel) ==
             "a50182825820aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa03825820bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb070258205edaa384c658c2bd8945ae389edac0a5bd452d0cfd5d1245e3ecd540030d1e3c03581de14828a2dadba97ca9fd0cdc99975899470c219bdc0d828cfa6ddf6d69041930390500")
-        #expect(try Self.labelHex(aux, CIP36.witnessLabel) ==
-            "a101584077ffa94e367e2294ad8aaa19afa88b46866d1e8e3d59b6e22b45e386aabd931a51a3c9be1480818648c73be3317bec4bbd2bf20f22bf8a3e0dc10c4964b45602")
+        let witness = try Self.labelHex(aux, CIP36.witnessLabel)
+        #expect(witness ==
+            "a10158407759d560615836a4ef047bbb43add9e9986ae0eff7f35a8df0aa11aee4b6867d7920eca4875e4d0ec37555fdf29a23b1ef942e8134c67c73e4eb6d34ae98e802")
         // Labels are written in ascending order.
         #expect(Self.hex(try aux.toCBORData()).hasPrefix("a219ef64a5"))
     }
@@ -49,8 +53,9 @@ struct CIP36CIP88VectorTests {
         )
         #expect(try Self.labelHex(aux, CIP36.deregistrationLabel) ==
             "a30158205edaa384c658c2bd8945ae389edac0a5bd452d0cfd5d1245e3ecd540030d1e3c0218630300")
-        #expect(try Self.labelHex(aux, CIP36.deregistrationWitnessLabel) ==
-            "a1015840c0faa43bd20c020c944017c73e50ffa3533d01dc7ed5f5d3945e693e8dc99654fd83b993f78eef3e8a06bfb4b9712f2eeb56568559e1e28d91654438fb163a03")
+        let witness = try Self.labelHex(aux, CIP36.deregistrationWitnessLabel)
+        #expect(witness ==
+            "a1015840e07293282dc1bd8deecabd597acaee923269bf8aa025109ca7f5b1d8f1236d25005e9c2c0c82ab70bf4fc01103b56257e71fc1b3510e82da06b409c59fff7605")
         #expect(Self.hex(try aux.toCBORData()).hasPrefix("a219ef66a3"))
     }
 

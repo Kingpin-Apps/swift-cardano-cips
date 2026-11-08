@@ -220,10 +220,15 @@ public enum CIP36 {
         witnessLabel: UInt64,
         signingKey: SigningKeyType
     ) throws -> AuxiliaryData {
-        // CBOR-encode the payload metadatum and Blake2b-256 hash it.
+        // CIP-36 sign_data is the CBOR of a one-entry map keyed by the
+        // payload label, {61284: registration} or {61286: deregistration},
+        // as cardano-signer and the Ledger Cardano app build it.
+        let signData: TransactionMetadatum = .map(MapPairs([
+            (.int(Int(payloadLabel)), payload),
+        ]))
         let payloadCBOR: Data
         do {
-            payloadCBOR = try payload.toCBORData()
+            payloadCBOR = try signData.toCBORData()
         } catch {
             throw CIP36Error.encodingError(String(describing: error))
         }
@@ -239,9 +244,8 @@ public enum CIP36 {
             throw CIP36Error.encodingError("blake2b-256 failed: \(error)")
         }
 
-        // Sign the hash with the stake key. CIP-36 §7 specifies signing
-        // the blake2b-256 of the CBOR-encoded payload, not the payload
-        // itself.
+        // Sign the blake2b-256 of the label-wrapped sign_data with the
+        // stake key.
         let signature: Data
         do {
             signature = try signingKey.sign(data: payloadHash)
